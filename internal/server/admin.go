@@ -111,7 +111,14 @@ func (s *Server) adminHandler() http.Handler {
 // adminMiddleware wraps every admin route, including future console POST routes.
 func (s *Server) adminMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; frame-ancestors 'none'; form-action 'self'")
+		csp := "default-src 'self'; frame-ancestors 'none'; form-action 'self'"
+		if r.URL.Path == "/login" {
+			// Chromium applies form-action to the entire login redirect chain,
+			// including the final apps-origin hop that redeems a viewer ticket.
+			// AppsURL is a validated origin; keep this exception on login only.
+			csp += " " + strings.TrimRight(s.Config.AppsURL, "/")
+		}
+		w.Header().Set("Content-Security-Policy", csp)
 		w.Header().Set("Cross-Origin-Opener-Policy", "same-origin")
 		w.Header().Set("Referrer-Policy", "same-origin")
 		w.Header().Set("Cache-Control", "no-store")
