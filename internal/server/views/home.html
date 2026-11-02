@@ -1,1 +1,9 @@
-<!doctype html><html lang="zh"><meta charset="utf-8"><title>tinyhost</title><h1>tinyhost</h1><p>{{.Message}}</p></html>
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>tinyhost App</title><script src="/static/admin.js" defer></script></head><body>
+<h1>tinyhost</h1><p>{{.Message}}</p>
+{{if .Ready}}{{template "nav"}}
+<section><h2>待批准的授权申请</h2><ul>{{range .Pending}}<li><a href="/device?code={{.UserCode}}">{{.Name}} · {{.UserCode}}</a> 申请于 {{.CreatedAt}}</li>{{else}}<li>暂无待批准申请</li>{{end}}</ul></section>
+<main><h2>App</h2><table><thead><tr><th>slug</th><th>标题</th><th>可见性</th><th>当前版本</th><th>创建者</th><th>最近更新</th></tr></thead><tbody>
+{{range .Apps}}<tr><td><a href="/apps/{{.Slug}}">{{.Slug}}</a></td><td>{{.Title}}</td><td>{{.Visibility}}</td><td>{{if .CurrentVersion}}v{{.CurrentVersion}}{{else}}尚未发布{{end}}</td><td>{{.CreatorName}}</td><td>{{.UpdatedAt}}</td></tr>{{else}}<tr><td colspan="6">暂无 App</td></tr>{{end}}</tbody></table>
+<section><h2>新建 App</h2><form action="/apps" method="post"><label>slug <input name="slug" required minlength="3" maxlength="40"></label><label>标题 <input name="title" maxlength="1024"></label><label>可见性 <select name="visibility"><option value="private">私有</option><option value="public">公开</option></select></label><button>新建空 App</button></form></section></main>
+{{end}}</body></html>

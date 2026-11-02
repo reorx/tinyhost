@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"fmt"
 	"mime"
 	"net/http"
 	"net/url"
@@ -43,13 +44,26 @@ func (s *Server) content(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, location, 301)
 		return
 	}
-	a, err := s.Store.AppBySlug(name)
+	a, err := s.Store.SlugOwner(name)
 	if err != nil {
 		s.internal(w, err)
 		return
 	}
 	if a == nil || a.DeletedAt != nil {
 		http.NotFound(w, r)
+		return
+	}
+	if a.Slug != name {
+		newSegment := a.Slug
+		if number != 0 {
+			newSegment += fmt.Sprintf("@v%d", number)
+		}
+		_, escapedRest, _ := strings.Cut(strings.TrimPrefix(r.URL.EscapedPath(), "/"), "/")
+		location := "/" + newSegment + "/" + escapedRest
+		if r.URL.RawQuery != "" {
+			location += "?" + r.URL.RawQuery
+		}
+		http.Redirect(w, r, location, http.StatusMovedPermanently)
 		return
 	}
 	// Authorization precedes version and file lookup to avoid disclosing private metadata.

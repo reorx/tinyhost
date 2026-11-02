@@ -24,7 +24,12 @@ type DeviceView struct {
 	Request *store.DeviceRequest
 	Message string
 }
-type HomeView struct{ Message string }
+type HomeView struct {
+	Message string
+	Apps    []AppRow
+	Pending []*store.DeviceRequest
+	Ready   bool
+}
 
 func (s *Server) render(w http.ResponseWriter, name string, data any) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -70,9 +75,19 @@ func (s *Server) adminHandler() http.Handler {
 	mux.HandleFunc("POST /login", s.login)
 	mux.HandleFunc("POST /logout", s.adminLogout)
 	mux.HandleFunc("POST /logout-all", s.adminLogout)
-	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
-		s.render(w, "home.html", HomeView{Message: "后台管理即将提供"})
-	})
+	mux.HandleFunc("GET /{$}", s.consoleHome)
+	mux.HandleFunc("POST /apps", s.consoleCreateApp)
+	mux.HandleFunc("GET /apps/{slug}", s.consoleApp)
+	for _, action := range []string{"visibility", "rename", "promote", "versions/{n}/delete", "data/remove", "delete"} {
+		mux.HandleFunc("POST /apps/{slug}/"+action, s.consoleAppAction)
+	}
+	mux.HandleFunc("GET /trash", s.consoleTrash)
+	mux.HandleFunc("POST /trash/{id}/restore", s.consoleTrashAction)
+	mux.HandleFunc("POST /trash/{id}/purge", s.consoleTrashAction)
+	mux.HandleFunc("GET /agents", s.consoleAgents)
+	mux.HandleFunc("POST /agents", s.consoleIssueToken)
+	mux.HandleFunc("POST /agents/{id}/revoke", s.consoleRevokeAgent)
+	mux.HandleFunc("GET /events", s.consoleEvents)
 	mux.HandleFunc("GET /device", s.devicePage)
 	mux.HandleFunc("POST /device/{id}/approve", s.deviceDecision)
 	mux.HandleFunc("POST /device/{id}/deny", s.deviceDecision)
@@ -174,14 +189,17 @@ func (s *Server) adminLogout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", 302)
 }
 func (s *Server) ownerEvent(action string, detail any) {
+	s.ownerAppEvent(action, "", detail)
+}
+func (s *Server) ownerAppEvent(action, app string, detail any) {
 	// Reuse the event callback contract without requiring an Agent request context.
 	data, err := json.Marshal(detail)
 	if err != nil {
 		s.logger().Error("encode owner event", "error", err)
 		return
 	}
-	e := Event{Actor: "owner", Action: action, Detail: string(data)}
-	if err := s.Store.AddEvent(e.Actor, e.Action, "", e.Detail); err != nil {
+	e := Event{Actor: "owner", Action: action, AppID: app, Detail: string(data)}
+	if err := s.Store.AddEvent(e.Actor, e.Action, e.AppID, e.Detail); err != nil {
 		s.logger().Error("record owner event", "error", err)
 		return
 	}

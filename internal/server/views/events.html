@@ -1,0 +1,2 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>操作记录 · tinyhost</title><script src="/static/admin.js" defer></script></head><body>{{template "nav"}}<main><h1>操作记录</h1><p>最近 200 条</p><form action="/events" method="get"><label>按 App ID 筛选（留空查看全部） <input name="app" value="{{.AppFilter}}" list="app-options"></label><datalist id="app-options">{{range .Apps}}<option value="{{.ID}}">{{.Slug}}</option>{{end}}</datalist><button>筛选</button></form>{{template "audit" .Events}}</main></body></html>
