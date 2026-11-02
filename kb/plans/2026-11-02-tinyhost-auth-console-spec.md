@@ -245,16 +245,16 @@ CREATE TABLE slug_redirects (
 
 ### 实施步骤
 
-- [ ] 迁移和 store 函数：settings、device_requests、sessions、view_tickets、slug_redirects，先写测试
-- [ ] 把验收标准 1–13 写成行为测试（此时全部失败）
-- [ ] 设备授权端点 + 批准页
-- [ ] admin 登录、会话、Origin 校验中间件、响应头
-- [ ] 后台页面：App 列表与新建、详情（可见性、改名、版本、覆盖目录、删除）、回收站、Agent、操作记录
-- [ ] 私有查看：view-auth、`/_/auth`、内容托管的会话检查
-- [ ] `tinyhost-server passwd`；`serve` 校验 `--admin-url`
-- [ ] CLI `login` / `logout` / `whoami` 及 golden 快照
-- [ ] 更新 `docs/json-output.md`、`AGENTS.md`、`skill/SKILL.md`（登录一节）
-- [ ] 本地手动验收：用 `localhost` / `admin.localhost` 走一遍授权、私有查看、改名、回收站，截图存到 `tmp/<日期>-m2-auth-console/`
+- [x] 迁移和 store 函数：settings、device_requests、sessions、view_tickets、slug_redirects，先写测试
+- [x] 把验收标准 1–13 写成行为测试（此时全部失败）
+- [x] 设备授权端点 + 批准页
+- [x] admin 登录、会话、Origin 校验中间件、响应头
+- [x] 后台页面：App 列表与新建、详情（可见性、改名、版本、覆盖目录、删除）、回收站、Agent、操作记录
+- [x] 私有查看：view-auth、`/_/auth`、内容托管的会话检查
+- [x] `tinyhost-server passwd`；`serve` 校验 `--admin-url`
+- [x] CLI `login` / `logout` / `whoami` 及 golden 快照
+- [x] 更新 `docs/json-output.md`、`AGENTS.md`、`skill/SKILL.md`（登录一节）
+- [x] 本地手动验收：用 `localhost` / `admin.localhost` 走一遍授权、私有查看、改名、回收站，截图存到 `tmp/<日期>-m2-auth-console/`
 
 ### 测试与验证
 

@@ -4,7 +4,7 @@
 
 ## 现状
 
-- 2026-11-02：M1 核心发布已完成（基础库、服务端、CLI、本地手动验收）；token 暂时只能用 `tinyhost-server token create` 签发后放进 `TINYHOST_TOKEN`。下一步是 M2 授权与后台。总 plan 和四期 spec 在 `kb/plans/2026-11-02-tinyhost*.md`。
+- 2026-11-02：M1 核心发布、M2 授权与后台已完成，都经过本地真实浏览器验收（截图在 `tmp/2026-11-02-m1-core-publish/`、`tmp/2026-11-02-m2-*`）。下一步是 M3 预览与分发。总 plan 和四期 spec 在 `kb/plans/2026-11-02-tinyhost*.md`。
 - 生产部署在 deploy 目录管理（见用户全局 CLAUDE.md 的 DevOps 约定），M4 才上线。
 
 ## 关键约束
@@ -35,11 +35,16 @@
 - `internal/blob`：内容寻址存储。Put 写完才原子发布；复用同一块时刷新 mtime。临时目录和 blobs 目录必须在同一个文件系统上（发布用硬链接）。
 - `internal/bundle`：目录或单文件打包成 tar.gz，服务端流式安全解包。根目录的 `tinyhost.json` 只当元数据，不作为网页文件提供。Pack 生成的临时文件由调用者清理。
 - `internal/store`：内嵌 `schema.sql`，用 `user_version` 迁移。`CommitAppVersion` / `CommitDataVersion` 在一个事务里写层、版本、主入口；参数里的 app 用 ID；数据层的路径要预先加上规范化的覆盖目录前缀。`LookupVersionFile` 在覆盖层里找不到文件时不回落到 App 包层；补 `.html`、404 等 HTTP 策略由 server 负责。
+  - M2（`user_version=2`）新增授权申请、会话、查看票据、settings、`slug_redirects`。`PollDevice` 在一个事务里创建并消费 client。`SlugOwner` 同时查现名和历史跳转；`CreateApp` 上的插入触发器阻止复用旧 slug。
 - `internal/api`：HTTP API 和 CLI `--json` 共用的 DTO，接口契约见 `docs/json-output.md`。CLI 直接输出这些 DTO，不输出 store 的模型。
 - `internal/server`：按 Host 分流、只认 Bearer 的 Agent API、内容解析、GC。`Server.Now` 可注入时钟；`OnEvent` 在审计记录落库后通知上层。上传和 GC 之间有一把生命周期锁，保护「blob 写完到 SQL 提交」这段窗口，上传之间仍然并发。
-- `internal/cli`：Agent 用的 CLI，stdlib `flag` + `register` 分发。远端命令直接输出 `internal/api` 的 DTO；JSON 的成功和错误都走 stdout，警告走 stderr。服务器地址的优先级：`--server` > `TINYHOST_SERVER` > `os.UserConfigDir()/tinyhost/config.json`。M1 的 token 只从 `TINYHOST_TOKEN` 读。
+- `internal/server/admin.go`：admin 域名的路由都加在 `adminHandler` 里，`adminMiddleware` 统一负责会话检查和所有 POST 的 Origin 校验。模板和静态文件在 `views/`，用 embed 打包；handler 传给模板的是具名 view model，路由、表单字段名、view model 字段只增不改。`Server.Now` 同时控制 token、会话、设备授权和限速的时钟。admin 页面的 CSP 统一是 `form-action 'self'`，只有 `/login` 的响应额外允许 apps 源：登录后的 302 链最后一跳是 apps 域名的 `/_/auth`，Chrome 把整条链都算作表单提交，不放行就回不到私有 App（见 `kb/sessions/2026-11-02-th-m2-fix2.md`）。
+- `internal/server/console.go`：后台业务页面的 handler 和 view model。所有页面的路由、表单字段、view model 字段见 `kb/sessions/2026-11-02-th-m2-console.md` 的「页面清单」，改界面前先读。新增的 App 写操作用 `ownerAppEvent` 记审计，保留 AppID。
+- `internal/server/views/`：`shared.html` 定义 `head`（参数是页面标题）、`nav`（参数是当前页 key：`apps` / `trash` / `agents` / `events`）、`brand`、`audit`、`action`（动作码 → 中文）、`visibility`、`code`（验证码加连字符）和 `i-*` 图标。样式全部在 `static/admin.css`，浅色和深色的令牌在 `:root`。`static/admin.js` 负责 `data-confirm`、`<time data-ts>` 按本地时区显示、`data-copy` 和账户菜单。CSP 不允许 `style` 属性、`<style>` 和内联 `<script>`，样式只能写进 CSS 文件。操作记录页的审计表要保持字面量 `<table>`，筛选放在表格前面（测试按它切分）。
+- `internal/store/console.go`：`RenameApp` 在一个事务里改名并预留旧名；`DeleteVersion` 在同一事务里拒绝删除当前版本；恢复和立即清理只作用于回收站里的 App。`Events` 返回最近 200 条，按稳定的 App ID 筛选，App 清理后审计记录仍在。旧 slug 的预留在 App 被清理（purge）后释放。
+- `internal/cli`：Agent 用的 CLI，stdlib `flag` + `register` 分发。远端命令直接输出 `internal/api` 的 DTO；JSON 的成功和错误都走 stdout，警告走 stderr。服务器地址的优先级：`--server` > `TINYHOST_SERVER` > `os.UserConfigDir()/tinyhost/config.json`。凭证按服务器分别保存，环境变量 `TINYHOST_TOKEN` 优先；凭证文件和待完成的 login 申请都以 0600 原子写入。`login` 等待超时退出码 4，再运行会继续同一个申请。`skill` 从根目录 `skill/` 包嵌入。
 - `cmd/tinyhost`：只调 CLI 的 Run 并返回退出码，不引入服务端和 SQLite 的依赖。
-- `cmd/tinyhost-server`：`serve` / `token create` / `gc` / `version`。数据库在 `<data-dir>/tinyhost.db`；相对的数据目录在入口处先转成绝对路径再传给 `store.Open`。
+- `cmd/tinyhost-server`：`serve` / `passwd` / `token create` / `gc` / `version`。`serve` 必须给出和 apps 不同 Host 的 `--admin-url`；`--insecure-cookies` 只用于本地。数据库在 `<data-dir>/tinyhost.db`；相对的数据目录在入口处先转成绝对路径再传给 `store.Open`。
 
 ## 文档
 
