@@ -29,6 +29,11 @@ func acceptanceServer(serverVersion string) *httptest.Server {
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/install.sh":
+			if serverVersion == "origin-down" {
+				// What Cloudflare returns when it cannot reach the origin.
+				w.WriteHeader(522)
+				return
+			}
 			_, _ = w.Write([]byte(fakeInstall))
 		case "/skill.md":
 			_, _ = w.Write([]byte("skill text\n"))
@@ -82,5 +87,21 @@ func TestInstallAcceptanceFailsWhenServerVersionHeaderDiffers(t *testing.T) {
 		if strings.Contains(out, "PASS login") {
 			t.Errorf("header %q: acceptance continued to login after a mismatch:\n%s", header, out)
 		}
+	}
+}
+
+// Behavior: install acceptance stops with an install failure when install.sh cannot be downloaded, instead of failing later on a missing CLI.
+func TestInstallAcceptanceReportsInstallFailureWhenInstallScriptDownloadFails(t *testing.T) {
+	srv := acceptanceServer("origin-down")
+	defer srv.Close()
+	out, err := runAcceptance(t, srv.URL)
+	if err == nil {
+		t.Fatalf("acceptance passed, want failure:\n%s", out)
+	}
+	if !strings.Contains(out, "安装失败") {
+		t.Errorf("output lacks the install failure:\n%s", out)
+	}
+	if strings.Contains(out, "No such file") {
+		t.Errorf("acceptance ran the missing CLI instead of stopping:\n%s", out)
 	}
 }

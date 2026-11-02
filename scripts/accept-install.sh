@@ -13,6 +13,8 @@ mkdir "$home_dir"
 # Clean child environment: no TINYHOST_SERVER/TOKEN/INSTALL_DIR, no real config.
 env -i HOME="$home_dir" PATH="$PATH" sh -c 'curl -fsSL "$1/install.sh" | sh' sh "${server%/}"
 cli="$home_dir/.local/bin/tinyhost"
+# The pipe hides a failed download (for example a Cloudflare 52x): sh just reads nothing.
+if [ ! -x "$cli" ]; then echo "安装失败：没有生成 ${cli}，见上面 curl 或 install.sh 的输出" >&2; exit 1; fi
 actual=$(env -i HOME="$home_dir" PATH="$PATH" "$cli" version)
 if [ "$actual" != "$expected" ]; then echo "版本不一致：$actual != $expected" >&2; exit 1; fi
 printf 'PASS version=%s\n' "$actual"

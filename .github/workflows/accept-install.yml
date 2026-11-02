@@ -53,6 +53,8 @@ jobs:
           if [ -x "$accept/home/.local/bin/tinyhost" ]; then
             file "$accept/home/.local/bin/tinyhost" > evidence/cli-file.txt
           fi
+          # Which Cloudflare colo this runner reaches, for diagnosing 52x from the edge.
+          curl -sS -D evidence/install-headers.txt -o /dev/null "$SERVER/install.sh" || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
