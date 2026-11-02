@@ -1,1 +1,86 @@
-<!doctype html><html lang="zh"><meta charset="utf-8"><title>授权 Agent</title><h1>授权 Agent</h1><p>{{.Message}}</p>{{with .Request}}<dl><dt>名称</dt><dd>{{.Name}}</dd><dt>设备信息（含主机、系统、架构、版本和来源 IP）</dt><dd>{{.Meta}}</dd><dt>申请时间</dt><dd>{{.CreatedAt}}</dd><dt>验证码</dt><dd>{{.UserCode}}</dd></dl><form action="/device/{{.ID}}/approve" method="post"><label>名称 <input name="name" value="{{.Name}}" required></label><label>有效期 <select name="ttl"><option value="1d">1 天</option><option value="30d" selected>30 天</option><option value="forever">永久</option></select></label><button>批准</button></form><form action="/device/{{.ID}}/deny" method="post"><button>拒绝</button></form>{{end}}</html>
+<!doctype html>
+<html lang="zh">
+<head>{{template "head" "批准授权"}}</head>
+<body class="solo">
+<main class="solo-main">
+  <div class="solo-brand">{{template "brand"}}<a class="solo-back" href="/">后台首页</a></div>
+{{with .Request}}
+  <h1>批准 Agent 授权</h1>
+  <p class="lead">有一个 Agent 在申请发布权限。先确认下面的验证码和 Agent 发给你的一致。</p>
+  <div class="usercode">
+    <span class="usercode-label">验证码</span>
+    <strong class="usercode-value mono">{{template "code" .UserCode}}</strong>
+    <span class="usercode-exp"><time data-ts="{{.ExpiresAt}}">{{.ExpiresAt}}</time>过期</span>
+  </div>
+  <dl class="facts">
+    <div><dt>名称</dt><dd>{{.Name}}</dd></div>
+    <div><dt>主机名</dt><dd class="mono">{{with $.Info.Hostname}}{{.}}{{else}}<span class="muted">未提供</span>{{end}}</dd></div>
+    <div><dt>系统与架构</dt><dd class="mono">{{if or $.Info.OS $.Info.Arch}}{{$.Info.OS}}{{if and $.Info.OS $.Info.Arch}}/{{end}}{{$.Info.Arch}}{{else}}<span class="muted">未提供</span>{{end}}</dd></div>
+    <div><dt>CLI 版本</dt><dd class="mono">{{with $.Info.CLIVersion}}{{.}}{{else}}<span class="muted">未提供</span>{{end}}</dd></div>
+    <div><dt>来源 IP</dt><dd class="mono">{{with $.Info.RequestIP}}{{.}}{{else}}<span class="muted">未知</span>{{end}}</dd></div>
+    <div><dt>申请时间</dt><dd><time data-ts="{{.CreatedAt}}">{{.CreatedAt}}</time></dd></div>
+  </dl>
+  <form class="stack" action="/device/{{.ID}}/approve" method="post">
+    <div class="field">
+      <label for="name">授权名称</label>
+      <input class="input input-lg" id="name" name="name" value="{{.Name}}" required maxlength="256" autocomplete="off">
+      <p class="hint">以后在 Agent 列表和操作记录里显示这个名字。</p>
+    </div>
+    <fieldset class="field">
+      <legend>有效期</legend>
+      <div class="seg seg-lg">
+        <label><input type="radio" name="ttl" value="1d"><span>1 天</span></label>
+        <label><input type="radio" name="ttl" value="30d" checked><span>30 天</span></label>
+        <label><input type="radio" name="ttl" value="forever"><span>永久</span></label>
+      </div>
+    </fieldset>
+    <button class="btn btn-primary btn-lg btn-block">{{template "i-check"}}批准</button>
+  </form>
+  <form class="deny" action="/device/{{.ID}}/deny" method="post">
+    <p>不认识这个申请，或者验证码对不上？</p>
+    <button class="btn btn-danger btn-lg btn-block">拒绝</button>
+  </form>
+{{else}}
+  {{if eq .Message "approved"}}
+  <div class="result result-ok">
+    <span class="result-icon">{{template "i-check"}}</span>
+    <h1>已批准</h1>
+    <p>{{with .Name}}<strong>{{.}}</strong> 已获得授权，{{end}}有效期{{if eq .TTL "1d"}} 1 天{{else if eq .TTL "forever"}}：永久{{else}} 30 天{{end}}。</p>
+    <p class="muted">Agent 下一次轮询就会拿到授权。如果它已经退出等待，让它再运行一次 <code>tinyhost login</code>。</p>
+  </div>
+  {{else if eq .Message "denied"}}
+  <div class="result">
+    <span class="result-icon">{{template "i-x"}}</span>
+    <h1>已拒绝</h1>
+    <p class="muted">Agent 会收到「已拒绝」。如果是误操作，让它重新运行 <code>tinyhost login</code>，会生成新的验证码。</p>
+  </div>
+  {{else}}
+  <div class="result result-warn">
+    <span class="result-icon">{{template "i-alert"}}</span>
+    {{if eq .Message "申请已过期"}}
+    <h1>申请已过期</h1>
+    <p class="muted">验证码 10 分钟内有效。让 Agent 重新运行 <code>tinyhost login</code>，把新链接发给你。</p>
+    {{else if eq .Message "申请已处理：approved" "申请已处理：consumed"}}
+    <h1>这个申请已经批准过了</h1>
+    <p class="muted">不需要再操作，可以在 <a href="/agents">Agent 列表</a>里看到它。</p>
+    {{else if eq .Message "申请已处理：denied"}}
+    <h1>这个申请已经被拒绝</h1>
+    <p class="muted">需要授权的话，让 Agent 重新运行 <code>tinyhost login</code>。</p>
+    {{else}}
+    <h1>{{.Message}}</h1>
+    <p class="muted">检查链接是否完整，或者手动输入 Agent 给你的验证码。</p>
+    {{end}}
+  </div>
+  <form class="stack code-form" action="/device" method="get">
+    <div class="field">
+      <label for="code">验证码</label>
+      <input class="input input-lg mono" id="code" name="code" placeholder="XXXX-XXXX" required autocomplete="off" autocapitalize="characters" spellcheck="false">
+    </div>
+    <button class="btn btn-lg btn-block">查找申请</button>
+  </form>
+  {{end}}
+  <p class="solo-foot"><a href="/">回到后台首页</a></p>
+{{end}}
+</main>
+</body>
+</html>

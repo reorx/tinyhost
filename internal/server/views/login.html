@@ -1,1 +1,28 @@
-<!doctype html><html lang="zh"><meta charset="utf-8"><title>tinyhost 登录</title><h1>登录 tinyhost</h1><p>tinyhost 只会在 {{.AdminURL}} 要求输入密码。</p><p>{{.Error}}</p><form action="/login" method="post"><input type="hidden" name="next" value="{{.Next}}"><label>密码 <input type="password" name="password" required autocomplete="current-password"></label><button>登录</button></form></html>
+<!doctype html>
+<html lang="zh">
+<head>{{template "head" "登录"}}</head>
+<body class="solo">
+<main class="solo-main">
+  <div class="solo-brand">{{template "brand"}}</div>
+  <h1>登录后台</h1>
+  <div class="callout callout-warn" role="note">
+    {{template "i-shield"}}
+    <div>
+      <p class="callout-title">tinyhost 只会在 <strong class="mono">{{.AdminURL}}</strong> 要求输入密码。</p>
+      <p>输入前先看一眼地址栏。在 App 页面里出现的密码框都不是 tinyhost 的。</p>
+    </div>
+  </div>
+  {{if .Error}}<p class="alert alert-danger" role="alert">{{template "i-alert"}}{{.Error}}</p>{{end}}
+  <form class="stack" action="/login" method="post">
+    <input type="hidden" name="next" value="{{.Next}}">
+    <input type="text" name="username" value="owner" autocomplete="username" hidden>
+    <div class="field">
+      <label for="password">密码</label>
+      <input class="input input-lg" id="password" type="password" name="password" required autocomplete="current-password" autofocus>
+    </div>
+    <button class="btn btn-primary btn-lg btn-block">登录</button>
+  </form>
+  <p class="solo-foot">登录状态在这个浏览器保持 30 天。</p>
+</main>
+</body>
+</html>

@@ -353,3 +353,26 @@ func TestGlobalLoginRateLimitRefills(t *testing.T) {
 		t.Fatal(w.Code)
 	}
 }
+
+// Behavior: the approval page shows the Agent's reported host, platform, CLI version and source IP as separate facts, and the approval result echoes the granted name and lifetime.
+func TestDevicePageShowsRequestFactsAndApprovalResult(t *testing.T) {
+	f := setup(t)
+	c := adminCookie(t, f)
+	w := authReq(f, "apps.test", "POST", "/_/api/v1/device/code", `{"name":"agent","hostname":"build-box","os":"linux","arch":"arm64","cli_version":"v9.8.7"}`)
+	if w.Code != 200 {
+		t.Fatal(w.Code, w.Body.String())
+	}
+	var d api.DeviceCodeResult
+	json.Unmarshal(w.Body.Bytes(), &d)
+	page := authReq(f, "admin.test", "GET", "/device?code="+d.UserCode, "", c)
+	for _, want := range []string{d.UserCode, "build-box", "linux/arm64", "v9.8.7", "192.0.2.1"} {
+		if !strings.Contains(page.Body.String(), want) {
+			t.Fatalf("missing %q: %s", want, page.Body.String())
+		}
+	}
+	stored, _ := f.s.Store.DeviceByCode(strings.ReplaceAll(d.UserCode, "-", ""))
+	result := authReq(f, "admin.test", "POST", "/device/"+stored.ID+"/approve", "name=renamed-agent&ttl=forever", c)
+	if result.Code != 200 || !strings.Contains(result.Body.String(), "renamed-agent") || !strings.Contains(result.Body.String(), "永久") {
+		t.Fatal(result.Code, result.Body.String())
+	}
+}

@@ -1,9 +1,77 @@
 <!doctype html>
-<html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>tinyhost App</title><script src="/static/admin.js" defer></script></head><body>
-<h1>tinyhost</h1><p>{{.Message}}</p>
-{{if .Ready}}{{template "nav"}}
-<section><h2>待批准的授权申请</h2><ul>{{range .Pending}}<li><a href="/device?code={{.UserCode}}">{{.Name}} · {{.UserCode}}</a> 申请于 {{.CreatedAt}}</li>{{else}}<li>暂无待批准申请</li>{{end}}</ul></section>
-<main><h2>App</h2><table><thead><tr><th>slug</th><th>标题</th><th>可见性</th><th>当前版本</th><th>创建者</th><th>最近更新</th></tr></thead><tbody>
-{{range .Apps}}<tr><td><a href="/apps/{{.Slug}}">{{.Slug}}</a></td><td>{{.Title}}</td><td>{{.Visibility}}</td><td>{{if .CurrentVersion}}v{{.CurrentVersion}}{{else}}尚未发布{{end}}</td><td>{{.CreatorName}}</td><td>{{.UpdatedAt}}</td></tr>{{else}}<tr><td colspan="6">暂无 App</td></tr>{{end}}</tbody></table>
-<section><h2>新建 App</h2><form action="/apps" method="post"><label>slug <input name="slug" required minlength="3" maxlength="40"></label><label>标题 <input name="title" maxlength="1024"></label><label>可见性 <select name="visibility"><option value="private">私有</option><option value="public">公开</option></select></label><button>新建空 App</button></form></section></main>
-{{end}}</body></html>
+<html lang="zh">
+<head>{{template "head" "App"}}</head>
+{{if .Ready}}<body>
+{{template "nav" "apps"}}
+<main class="page">
+  {{if .Pending}}
+  <section class="pending" aria-labelledby="pending-title">
+    <h2 id="pending-title">待批准的授权申请<span class="count">{{len .Pending}}</span></h2>
+    <ul class="pending-list">
+      {{range .Pending}}<li>
+        <a class="pending-row" href="/device?code={{.UserCode}}">
+          <span class="pending-name">{{.Name}}</span>
+          <span class="mono pending-code">{{template "code" .UserCode}}</span>
+          <span class="muted">申请于 <time data-ts="{{.CreatedAt}}">{{.CreatedAt}}</time></span>
+          <span class="pending-go">去批准</span>
+        </a>
+      </li>{{end}}
+    </ul>
+  </section>
+  {{end}}
+  <div class="split">
+    <section aria-labelledby="apps-title">
+      <div class="page-head">
+        <h1 id="apps-title">App<span class="count">{{len .Apps}}</span></h1>
+      </div>
+      <div class="tbl tbl-apps"><table>
+        <thead><tr><th>App</th><th>可见性</th><th>当前版本</th><th>创建者</th><th>最近更新</th></tr></thead>
+        <tbody>{{range .Apps}}<tr>
+          <td class="primary"><a class="app-link" href="/apps/{{.Slug}}"><span class="mono slug">{{.Slug}}</span>{{if .Title}}<span class="app-title">{{.Title}}</span>{{end}}</a></td>
+          <td>{{template "visibility" .Visibility}}</td>
+          <td class="mono">{{with .CurrentVersion}}v{{.}}{{else}}<span class="muted">尚未发布</span>{{end}}</td>
+          <td>{{.CreatorName}}</td>
+          <td class="nowrap"><time data-ts="{{.UpdatedAt}}">{{.UpdatedAt}}</time></td>
+        </tr>{{else}}<tr><td class="empty" colspan="5">
+          <p>还没有 App。</p>
+          <p class="muted">让 Agent 运行 <code>tinyhost deploy &lt;目录&gt; --app &lt;slug&gt; --create</code> 发布第一个，或者在右边先建一个空 App 占好路径。</p>
+        </td></tr>{{end}}</tbody>
+      </table></div>
+    </section>
+    <aside class="panel" aria-labelledby="create-title">
+      <h2 id="create-title">新建 App</h2>
+      <p class="hint">先建一个空 App、定好路径，之后由 Agent 往里发布。</p>
+      <form class="stack" action="/apps" method="post">
+        <div class="field">
+          <label for="slug">slug</label>
+          <input class="input mono" id="slug" name="slug" required minlength="3" maxlength="40" pattern="[a-z0-9]+(-[a-z0-9]+)*" autocomplete="off" spellcheck="false" placeholder="q3-report">
+          <p class="hint">小写字母、数字和连字符，3–40 个字符。</p>
+        </div>
+        <div class="field">
+          <label for="title">标题</label>
+          <input class="input" id="title" name="title" maxlength="1024" placeholder="可选">
+        </div>
+        <fieldset class="field">
+          <legend>可见性</legend>
+          <div class="seg">
+            <label><input type="radio" name="visibility" value="private" checked><span>{{template "i-lock"}}私有</span></label>
+            <label><input type="radio" name="visibility" value="public"><span>{{template "i-globe"}}公开</span></label>
+          </div>
+        </fieldset>
+        <button class="btn btn-primary">新建空 App</button>
+      </form>
+    </aside>
+  </div>
+</main>
+</body>{{else}}<body class="solo">
+<main class="solo-main">
+  <div class="solo-brand">{{template "brand"}}</div>
+  <div class="result result-warn">
+    <span class="result-icon">{{template "i-terminal"}}</span>
+    <h1>还没有设置密码</h1>
+    <p>{{.Message}}</p>
+    <p class="muted">设置好之后刷新这个页面。</p>
+  </div>
+</main>
+</body>{{end}}
+</html>

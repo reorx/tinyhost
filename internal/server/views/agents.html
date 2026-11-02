@@ -1,5 +1,61 @@
 <!doctype html>
-<html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Agent · tinyhost</title><script src="/static/admin.js" defer></script></head><body>{{template "nav"}}<main><h1>Agent 管理</h1>
-{{if .Token}}<section aria-label="新签发的 token"><h2>{{.IssuedName}} 的 token</h2><p>只显示这一次，请配进 Agent 环境的 TINYHOST_TOKEN 环境变量。</p><code>{{.Token}}</code><p>到期时间：{{if .ExpiresAt}}{{.ExpiresAt}}{{else}}永久{{end}}</p><a href="/agents">已保存，返回列表</a></section>{{end}}
-<table><thead><tr><th>名称</th><th>批准时间</th><th>到期时间</th><th>最近使用</th><th>IP</th><th>状态</th><th>操作</th></tr></thead><tbody>{{range .Agents}}<tr><td>{{.Name}}</td><td>{{.CreatedAt}}</td><td>{{if .ExpiresAt}}{{.ExpiresAt}}{{else}}永久{{end}}</td><td>{{if .LastUsedAt}}{{.LastUsedAt}}{{else}}尚未使用{{end}}</td><td>{{.LastUsedIP}}</td><td>{{.Status}}</td><td>{{if not .RevokedAt}}<form action="/agents/{{.ID}}/revoke" method="post" data-confirm="撤销此 Agent？它将立即失去访问权限。"><button>撤销</button></form>{{end}}</td></tr>{{else}}<tr><td colspan="7">暂无 Agent</td></tr>{{end}}</tbody></table>
-<section><h2>手动签发 token</h2><form action="/agents" method="post"><label>名称 <input name="name" required maxlength="256"></label><label>有效期 <select name="ttl"><option value="1d">1 天</option><option value="30d" selected>30 天</option><option value="forever">永久</option></select></label><button>签发 token</button></form></section></main></body></html>
+<html lang="zh">
+<head>{{template "head" "Agent"}}</head>
+<body>
+{{template "nav" "agents"}}
+<main class="page">
+  {{if .Token}}
+  <section class="issued" aria-labelledby="issued-title">
+    <h2 id="issued-title">{{template "i-check"}}已为 {{.IssuedName}} 签发 token</h2>
+    <p>这个 token <strong>只显示这一次</strong>，离开页面后无法再查看。请配进 Agent 环境的 <code>TINYHOST_TOKEN</code> 环境变量。</p>
+    <div class="secret">
+      <code class="secret-value">{{.Token}}</code>
+      <button type="button" class="btn btn-sm" data-copy="{{.Token}}" hidden>复制</button>
+    </div>
+    <p class="muted">到期时间：{{with .ExpiresAt}}<time data-ts="{{.}}" data-format="datetime">{{.}}</time>{{else}}永久{{end}}</p>
+    <a class="btn" href="/agents">已保存，返回列表</a>
+  </section>
+  {{end}}
+  <div class="split">
+    <section aria-labelledby="agents-title">
+      <div class="page-head">
+        <h1 id="agents-title">Agent<span class="count">{{len .Agents}}</span></h1>
+      </div>
+      <div class="tbl tbl-agents"><table>
+        <thead><tr><th>名称</th><th>状态</th><th>批准时间</th><th>到期时间</th><th>最近使用</th><th><span class="sr-only">操作</span></th></tr></thead>
+        <tbody>{{range .Agents}}<tr{{if ne .Status "有效"}} class="is-inactive"{{end}}>
+          <td class="primary"><span class="agent-name">{{.Name}}</span></td>
+          <td class="nowrap"><span class="badge{{if eq .Status "有效"}} badge-ok{{else if eq .Status "已过期"}} badge-warn{{else}} badge-muted{{end}}">{{.Status}}</span></td>
+          <td class="nowrap" data-label="批准"><time data-ts="{{.CreatedAt}}">{{.CreatedAt}}</time></td>
+          <td class="nowrap" data-label="到期">{{with .ExpiresAt}}<time data-ts="{{.}}">{{.}}</time>{{else}}永久{{end}}</td>
+          <td data-label="最近使用">{{with .LastUsedAt}}<time data-ts="{{.}}">{{.}}</time>{{else}}<span class="muted">尚未使用</span>{{end}}{{with .LastUsedIP}} <span class="mono muted ip">{{.}}</span>{{end}}</td>
+          <td class="full row-actions">{{if not .RevokedAt}}<form action="/agents/{{.ID}}/revoke" method="post" data-confirm="撤销 {{.Name}}？它的下一个请求就会失败，需要重新 tinyhost login。"><button class="btn btn-sm btn-danger">撤销</button></form>{{end}}</td>
+        </tr>{{else}}<tr><td class="empty" colspan="6">
+          <p>还没有 Agent。</p>
+          <p class="muted">让 Agent 运行 <code>tinyhost login</code>，把它给你的链接打开批准；或者在右边手动签发 token。</p>
+        </td></tr>{{end}}</tbody>
+      </table></div>
+    </section>
+    <aside class="panel" aria-labelledby="issue-title">
+      <h2 id="issue-title">手动签发 token</h2>
+      <p class="hint">用于每次都是全新容器的云端环境。token 只显示一次，配进 Agent 环境的 <code>TINYHOST_TOKEN</code> 环境变量。</p>
+      <form class="stack" action="/agents" method="post">
+        <div class="field">
+          <label for="agent-name">名称</label>
+          <input class="input" id="agent-name" name="name" required maxlength="256" autocomplete="off" placeholder="codex-cloud">
+        </div>
+        <fieldset class="field">
+          <legend>有效期</legend>
+          <div class="seg">
+            <label><input type="radio" name="ttl" value="1d"><span>1 天</span></label>
+            <label><input type="radio" name="ttl" value="30d" checked><span>30 天</span></label>
+            <label><input type="radio" name="ttl" value="forever"><span>永久</span></label>
+          </div>
+        </fieldset>
+        <button class="btn btn-primary">签发 token</button>
+      </form>
+    </aside>
+  </div>
+</main>
+</body>
+</html>

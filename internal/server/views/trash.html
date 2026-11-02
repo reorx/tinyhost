@@ -1,2 +1,28 @@
 <!doctype html>
-<html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>回收站 · tinyhost</title><script src="/static/admin.js" defer></script></head><body>{{template "nav"}}<main><h1>回收站</h1><table><thead><tr><th>App</th><th>删除时间</th><th>剩余天数</th><th>操作</th></tr></thead><tbody>{{range .Apps}}<tr><td>{{.Slug}} · {{.Title}}</td><td>{{.DeletedAt}}</td><td>{{.DaysRemaining}} 天</td><td><form action="/trash/{{.ID}}/restore" method="post"><button>恢复</button></form><form action="/trash/{{.ID}}/purge" method="post" data-confirm="立即清理此 App 及所有版本？此操作无法恢复。"><button>立即清理</button></form></td></tr>{{else}}<tr><td colspan="4">回收站为空</td></tr>{{end}}</tbody></table></main></body></html>
+<html lang="zh">
+<head>{{template "head" "回收站"}}</head>
+<body>
+{{template "nav" "trash"}}
+<main class="page">
+  <div class="page-head">
+    <h1>回收站<span class="count">{{len .Apps}}</span></h1>
+    <p class="subtitle">删除的 App 先放在这里，链接全部失效。到期后自动清理，清理后无法恢复。</p>
+  </div>
+  <div class="tbl tbl-trash"><table>
+    <thead><tr><th>App</th><th>删除时间</th><th>剩余</th><th><span class="sr-only">操作</span></th></tr></thead>
+    <tbody>{{range .Apps}}<tr>
+      <td class="primary"><span class="app-link"><span class="mono slug">{{.Slug}}</span>{{if .Title}}<span class="app-title">{{.Title}}</span>{{end}}</span></td>
+      <td class="nowrap" data-label="删除于">{{with .DeletedAt}}<time data-ts="{{.}}">{{.}}</time>{{end}}</td>
+      <td class="nowrap"><span class="badge{{if le .DaysRemaining 1}} badge-warn{{end}}">剩 {{.DaysRemaining}} 天</span></td>
+      <td class="full row-actions">
+        <form action="/trash/{{.ID}}/restore" method="post"><button class="btn btn-sm">恢复</button></form>
+        <form action="/trash/{{.ID}}/purge" method="post" data-confirm="立即清理 {{.Slug}} 及所有版本？此操作无法恢复。"><button class="btn btn-sm btn-danger">立即清理</button></form>
+      </td>
+    </tr>{{else}}<tr><td class="empty" colspan="4">
+      <p>回收站是空的。</p>
+      <p class="muted">在 App 详情页删除的 App 会出现在这里，可以恢复。</p>
+    </td></tr>{{end}}</tbody>
+  </table></div>
+</main>
+</body>
+</html>

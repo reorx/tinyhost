@@ -23,6 +23,17 @@ type LoginView struct{ Next, Error, AdminURL string }
 type DeviceView struct {
 	Request *store.DeviceRequest
 	Message string
+	// Info is Request.Meta decoded for display; zero when there is no request.
+	Info DeviceInfo
+	// Name and TTL echo the approve form on the decision page; empty on deny.
+	Name, TTL string
+}
+type DeviceInfo struct {
+	Hostname   string `json:"hostname"`
+	OS         string `json:"os"`
+	Arch       string `json:"arch"`
+	CLIVersion string `json:"cli_version"`
+	RequestIP  string `json:"request_ip"`
 }
 type HomeView struct {
 	Message string
@@ -224,7 +235,12 @@ func (s *Server) devicePage(w http.ResponseWriter, r *http.Request) {
 		msg = "申请已处理：" + d.Status
 		d = nil
 	}
-	s.render(w, "device.html", DeviceView{Request: d, Message: msg})
+	view := DeviceView{Request: d, Message: msg}
+	if d != nil {
+		// Meta is written by deviceCode; a malformed value only leaves the fields blank.
+		_ = json.Unmarshal([]byte(d.Meta), &view.Info)
+	}
+	s.render(w, "device.html", view)
 }
 func (s *Server) deviceDecision(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 16384)
@@ -263,7 +279,12 @@ func (s *Server) deviceDecision(w http.ResponseWriter, r *http.Request) {
 	s.ownerEvent("agent."+status, struct {
 		RequestID string `json:"request_id"`
 	}{r.PathValue("id")})
-	s.render(w, "device.html", DeviceView{Message: status})
+	view := DeviceView{Message: status}
+	if status == "approved" {
+		view.Name = name
+		view.TTL = r.FormValue("ttl")
+	}
+	s.render(w, "device.html", view)
 }
 func (s *Server) viewAuth(w http.ResponseWriter, r *http.Request) {
 	next := r.URL.Query().Get("next")

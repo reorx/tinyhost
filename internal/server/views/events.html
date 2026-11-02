@@ -1,2 +1,27 @@
 <!doctype html>
-<html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>操作记录 · tinyhost</title><script src="/static/admin.js" defer></script></head><body>{{template "nav"}}<main><h1>操作记录</h1><p>最近 200 条</p><form action="/events" method="get"><label>按 App ID 筛选（留空查看全部） <input name="app" value="{{.AppFilter}}" list="app-options"></label><datalist id="app-options">{{range .Apps}}<option value="{{.ID}}">{{.Slug}}</option>{{end}}</datalist><button>筛选</button></form>{{template "audit" .Events}}</main></body></html>
+<html lang="zh">
+<head>{{template "head" "操作记录"}}</head>
+<body>
+{{template "nav" "events"}}
+<main class="page">
+  <div class="page-head">
+    <div>
+      <h1>操作记录</h1>
+      <p class="subtitle">最近 200 条，包括 Agent 和你在后台的操作。</p>
+    </div>
+    {{$found := false}}{{range .Apps}}{{if eq .ID $.AppFilter}}{{$found = true}}{{end}}{{end}}
+    <form class="filter" action="/events" method="get">
+      <label class="sr-only" for="app-filter">按 App 筛选</label>
+      <select class="input" id="app-filter" name="app">
+        <option value="">全部 App</option>
+        {{range .Apps}}<option value="{{.ID}}"{{if eq .ID $.AppFilter}} selected{{end}}>{{.Slug}}</option>{{end}}
+        {{if and .AppFilter (not $found)}}<option value="{{.AppFilter}}" selected>{{.AppFilter}}（已删除）</option>{{end}}
+      </select>
+      <button class="btn">筛选</button>
+      {{if .AppFilter}}<a class="btn btn-ghost" href="/events">清除</a>{{end}}
+    </form>
+  </div>
+  {{template "audit" .Events}}
+</main>
+</body>
+</html>

@@ -1,2 +1,58 @@
-{{define "nav"}}<nav aria-label="后台导航"><a href="/">App</a> <a href="/trash">回收站</a> <a href="/agents">Agent</a> <a href="/events">操作记录</a></nav><form action="/logout" method="post"><button>退出</button></form><form action="/logout-all" method="post" data-confirm="退出所有浏览器的后台和私有查看会话？"><button>退出所有会话</button></form>{{end}}
-{{define "audit"}}<table><thead><tr><th>时间</th><th>操作者</th><th>动作</th><th>App</th><th>摘要</th></tr></thead><tbody>{{range .}}<tr><td>{{.At}}</td><td>{{.ActorName}} ({{.Actor}})</td><td>{{.Action}}</td><td>{{if .AppSlug}}<a href="/events?app={{.AppID}}">{{.AppSlug}}</a>{{else}}{{.AppID}}{{end}}</td><td>{{.Detail}}</td></tr>{{else}}<tr><td colspan="5">暂无操作记录</td></tr>{{end}}</tbody></table>{{end}}
+{{define "head"}}<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>{{.}} · tinyhost</title>
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/admin.css">
+<script src="/static/admin.js" defer></script>{{end}}
+
+{{define "mark"}}<svg class="mark" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="6.5" y="11.5" width="6" height="6" rx="1.5" class="mark-dot"/></svg>{{end}}
+
+{{define "brand"}}<a class="brand" href="/">{{template "mark"}}<span>tinyhost</span><span class="brand-tag">后台</span></a>{{end}}
+
+{{define "nav"}}<header class="topbar">
+  <div class="topbar-inner">
+    {{template "brand"}}
+    <nav class="nav" aria-label="后台导航">
+      <a href="/"{{if eq . "apps"}} aria-current="page"{{end}}>App</a>
+      <a href="/trash"{{if eq . "trash"}} aria-current="page"{{end}}>回收站</a>
+      <a href="/agents"{{if eq . "agents"}} aria-current="page"{{end}}>Agent</a>
+      <a href="/events"{{if eq . "events"}} aria-current="page"{{end}}>操作记录</a>
+    </nav>
+    <details class="menu">
+      <summary class="btn btn-ghost btn-sm" aria-label="账户">{{template "i-user"}}<span class="menu-label">Owner</span>{{template "i-chevron"}}</summary>
+      <div class="menu-pop">
+        <form action="/logout" method="post"><button class="menu-item">退出<span class="menu-hint">只退出这个浏览器</span></button></form>
+        <form action="/logout-all" method="post" data-confirm="退出所有浏览器的后台和私有查看会话？"><button class="menu-item menu-item-danger">退出所有会话<span class="menu-hint">所有浏览器都要重新登录，手机丢了时用</span></button></form>
+      </div>
+    </details>
+  </div>
+</header>{{end}}
+
+{{define "code"}}{{if eq (len .) 8}}{{slice . 0 4}}-{{slice . 4}}{{else}}{{.}}{{end}}{{end}}
+
+{{define "visibility"}}{{if eq . "public"}}<span class="badge badge-public">{{template "i-globe"}}公开</span>{{else}}<span class="badge badge-private">{{template "i-lock"}}私有</span>{{end}}{{end}}
+
+{{define "action"}}{{if eq . "app.created"}}新建 App{{else if eq . "app.deployed"}}发布 App 包{{else if eq . "data.pushed"}}推送数据{{else if eq . "data.removed"}}撤掉覆盖目录{{else if eq . "app.promoted"}}切换主入口{{else if eq . "app.visibility_changed"}}修改可见性{{else if eq . "app.renamed"}}修改 slug{{else if eq . "app.version_deleted"}}删除版本{{else if eq . "app.deleted"}}删除 App{{else if eq . "app.restored"}}从回收站恢复{{else if eq . "app.purged"}}立即清理{{else if eq . "agent.approved"}}批准授权{{else if eq . "agent.denied"}}拒绝授权{{else if eq . "agent.issued"}}手动签发 token{{else if eq . "agent.revoked"}}撤销 Agent{{else if eq . "owner.logged_out"}}退出登录{{else}}{{.}}{{end}}{{end}}
+
+{{define "audit"}}<div class="tbl tbl-audit"><table>
+<thead><tr><th>时间</th><th>操作者</th><th>动作</th><th>App</th><th>摘要</th></tr></thead>
+<tbody>{{range .}}<tr>
+<td class="nowrap"><time data-ts="{{.At}}" data-format="short">{{.At}}</time></td>
+<td>{{if eq .Actor "owner"}}<span class="who who-owner" title="{{.Actor}}">Owner</span>{{else}}<span class="who" title="{{.Actor}}">{{.ActorName}}</span>{{end}}</td>
+<td class="primary"><span class="action">{{template "action" .Action}}</span> <code class="action-code">{{.Action}}</code></td>
+<td>{{if .AppSlug}}<a class="mono" href="/events?app={{.AppID}}">{{.AppSlug}}</a>{{else if .AppID}}<a class="mono muted" href="/events?app={{.AppID}}" title="App 已清理">{{.AppID}}</a>{{end}}</td>
+<td class="full">{{if and .Detail (ne .Detail "null") (ne .Detail "{}")}}<code class="detail">{{.Detail}}</code>{{end}}</td>
+</tr>{{else}}<tr><td class="empty" colspan="5">暂无操作记录</td></tr>{{end}}</tbody>
+</table></div>{{end}}
+
+{{define "i-lock"}}<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>{{end}}
+{{define "i-globe"}}<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M2 8h12M8 2c1.7 1.7 2.5 3.7 2.5 6S9.7 12.3 8 14C6.3 12.3 5.5 10.3 5.5 8S6.3 3.7 8 2z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>{{end}}
+{{define "i-user"}}<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="5.5" r="2.75" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M2.75 14c.6-2.6 2.7-4 5.25-4s4.65 1.4 5.25 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>{{end}}
+{{define "i-chevron"}}<svg class="icon icon-sm" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>{{end}}
+{{define "i-external"}}<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M9 2.75h4.25V7M13 3L7.5 8.5M11.5 9.5v3a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>{{end}}
+{{define "i-shield"}}<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.75l5.25 2v4c0 3.2-2.2 5.5-5.25 6.5-3.05-1-5.25-3.3-5.25-6.5v-4z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M5.75 8l1.6 1.6 3-3.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>{{end}}
+{{define "i-check"}}<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>{{end}}
+{{define "i-x"}}<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>{{end}}
+{{define "i-alert"}}<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.25L14.25 13.5H1.75z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 6.5v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="11.6" r=".9" fill="currentColor"/></svg>{{end}}
+{{define "i-terminal"}}<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.75" y="2.75" width="12.5" height="10.5" rx="1.75" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4.5 6.5L6.5 8l-2 1.5M8 10h3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>{{end}}

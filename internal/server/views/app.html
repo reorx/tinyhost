@@ -1,10 +1,115 @@
 <!doctype html>
-<html lang="zh"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{.App.Slug}} · tinyhost</title><script src="/static/admin.js" defer></script></head><body>
-{{template "nav"}}<main><h1>{{.App.Slug}}</h1><p>{{.App.Title}}</p><p><a href="{{.MainURL}}">打开主入口</a></p><dl><dt>可见性</dt><dd>{{.App.Visibility}}</dd><dt>创建者</dt><dd>{{.CreatorName}}</dd><dt>创建时间</dt><dd>{{.App.CreatedAt}}</dd></dl>
-<form action="/apps/{{.App.Slug}}/visibility" method="post"><label>可见性 <select name="visibility"><option value="private" {{if eq .App.Visibility "private"}}selected{{end}}>私有</option><option value="public" {{if eq .App.Visibility "public"}}selected{{end}}>公开</option></select></label><button>保存可见性</button></form>
-<form action="/apps/{{.App.Slug}}/rename" method="post"><label>新 slug <input name="slug" value="{{.App.Slug}}" required minlength="3" maxlength="40"></label><button>改名</button></form><p>改名后旧地址永久跳转，旧 slug 保留。</p>
-<section><h2>版本</h2><table><thead><tr><th>版本</th><th>类型</th><th>发布者</th><th>说明</th><th>发布时间</th><th>操作</th></tr></thead><tbody>{{range .Versions}}<tr><td>v{{.Number}}{{if .Current}}（主入口）{{end}}</td><td>{{.Kind}}{{with .DataDir}} · {{.}}{{end}}</td><td>{{.PublisherName}}</td><td>{{.Message}}</td><td>{{.CreatedAt}}</td><td><a href="{{.URL}}">打开</a><form action="/apps/{{$.App.Slug}}/promote" method="post"><input type="hidden" name="version" value="{{.Number}}"><button>设为主入口</button></form>{{if not .Current}}<form action="/apps/{{$.App.Slug}}/versions/{{.Number}}/delete" method="post" data-confirm="删除此版本？原版本链接将无法访问。"><button>删除版本</button></form>{{end}}</td></tr>{{else}}<tr><td colspan="6">尚未发布</td></tr>{{end}}</tbody></table></section>
-<section><h2>覆盖目录</h2><table><thead><tr><th>目录</th><th>推送者</th><th>时间</th><th>操作</th></tr></thead><tbody>{{range .Overlays}}<tr><td>{{.Dir}}</td><td>{{.PublisherName}}</td><td>{{.PushedAt}}</td><td><form action="/apps/{{$.App.Slug}}/data/remove" method="post" data-confirm="撤掉覆盖目录？会生成一个新版本，原有版本保留。"><input type="hidden" name="dir" value="{{.Dir}}"><button>撤掉</button></form></td></tr>{{else}}<tr><td colspan="4">暂无覆盖目录</td></tr>{{end}}</tbody></table></section>
-<section><h2>App 包声明的数据目录</h2><dl>{{range $dir,$description:=.Manifest.Data}}<dt>{{$dir}}</dt><dd>{{$description}}</dd>{{else}}<dt>未声明数据目录</dt>{{end}}</dl></section>
-<section><h2>最近操作</h2><a href="/events?app={{.App.ID}}">查看此 App 的操作记录</a>{{template "audit" .Events}}</section>
-<form action="/apps/{{.App.Slug}}/delete" method="post" data-confirm="删除 App 并移入回收站？"><button>删除 App</button></form></main></body></html>
+<html lang="zh">
+<head>{{template "head" .App.Slug}}</head>
+<body>
+{{template "nav" "apps"}}
+<main class="page">
+  <nav class="crumbs" aria-label="位置"><a href="/">App</a><span aria-hidden="true">/</span><span class="mono">{{.App.Slug}}</span></nav>
+  <div class="page-head app-head">
+    <div>
+      <h1 class="mono">{{.App.Slug}}</h1>
+      {{if .App.Title}}<p class="subtitle">{{.App.Title}}</p>{{end}}
+    </div>
+    <div class="actions">
+      {{if .App.CurrentVersion}}<a class="btn btn-primary" href="{{.MainURL}}" target="_blank" rel="noopener">打开主入口{{template "i-external"}}</a>{{end}}
+    </div>
+  </div>
+
+  <dl class="summary">
+    <div class="summary-url"><dt>主入口</dt><dd><a class="mono" href="{{.MainURL}}" target="_blank" rel="noopener">{{.MainURL}}</a><button type="button" class="btn btn-ghost btn-xs" data-copy="{{.MainURL}}" hidden>复制</button></dd></div>
+    <div><dt>可见性</dt><dd>{{template "visibility" .App.Visibility}}</dd></div>
+    <div><dt>当前版本</dt><dd class="mono">{{with .App.CurrentVersion}}v{{.}}{{else}}<span class="muted">尚未发布</span>{{end}}</dd></div>
+    <div><dt>创建者</dt><dd>{{.CreatorName}}</dd></div>
+    <div><dt>创建时间</dt><dd><time data-ts="{{.App.CreatedAt}}" data-format="datetime">{{.App.CreatedAt}}</time></dd></div>
+    <div><dt>最近更新</dt><dd><time data-ts="{{.App.UpdatedAt}}">{{.App.UpdatedAt}}</time></dd></div>
+  </dl>
+
+  <section class="section" aria-labelledby="versions-title">
+    <div class="section-head"><h2 id="versions-title">版本<span class="count">{{len .Versions}}</span></h2></div>
+    <div class="tbl tbl-versions"><table>
+      <thead><tr><th>版本</th><th>类型</th><th>发布者</th><th>说明</th><th>发布时间</th><th><span class="sr-only">操作</span></th></tr></thead>
+      <tbody>{{range .Versions}}<tr{{if .Current}} class="is-current"{{end}}>
+        <td class="primary nowrap"><span class="mono ver">v{{.Number}}</span>{{if .Current}} <span class="badge badge-current">主入口</span>{{end}}</td>
+        <td class="nowrap">{{if eq .Kind "app"}}App 包{{else if eq .Kind "data"}}数据{{else}}{{.Kind}}{{end}}{{with .DataDir}} <code>{{.}}</code>{{end}}</td>
+        <td>{{.PublisherName}}</td>
+        <td class="full msg">{{with .Message}}{{.}}{{else}}<span class="muted">—</span>{{end}}</td>
+        <td class="nowrap"><time data-ts="{{.CreatedAt}}">{{.CreatedAt}}</time></td>
+        <td class="full row-actions">
+          <a class="btn btn-sm" href="{{.URL}}" target="_blank" rel="noopener">打开{{template "i-external"}}</a>
+          {{if not .Current}}<form action="/apps/{{$.App.Slug}}/promote" method="post"><input type="hidden" name="version" value="{{.Number}}"><button class="btn btn-sm">设为主入口</button></form>
+          <form action="/apps/{{$.App.Slug}}/versions/{{.Number}}/delete" method="post" data-confirm="删除 v{{.Number}}？这个版本的链接会变成 404，内容会被清理。"><button class="btn btn-sm btn-danger">删除</button></form>{{end}}
+        </td>
+      </tr>{{else}}<tr><td class="empty" colspan="6">
+        <p>还没有版本。</p>
+        <p class="muted">让 Agent 运行 <code>tinyhost deploy &lt;目录&gt; --app {{$.App.Slug}}</code> 发布第一版。</p>
+      </td></tr>{{end}}</tbody>
+    </table></div>
+  </section>
+
+  <div class="split-even">
+    <section class="section" aria-labelledby="overlays-title">
+      <div class="section-head"><h2 id="overlays-title">覆盖目录</h2></div>
+      <p class="hint">由 <code>tinyhost data push</code> 推送，盖住 App 包里的同名目录。撤掉会生成一个新版本，旧版本保留。</p>
+      <ul class="rows">
+        {{range .Overlays}}<li>
+          <div class="row-main"><code class="dir">{{.Dir}}</code><span class="muted">{{.PublisherName}} · <time data-ts="{{.PushedAt}}">{{.PushedAt}}</time></span></div>
+          <form action="/apps/{{$.App.Slug}}/data/remove" method="post" data-confirm="撤掉覆盖目录 {{.Dir}}？会生成一个新版本，原有版本保留。"><input type="hidden" name="dir" value="{{.Dir}}"><button class="btn btn-sm btn-danger">撤掉</button></form>
+        </li>{{else}}<li class="rows-empty">主入口版本没有覆盖目录。</li>{{end}}
+      </ul>
+    </section>
+    <section class="section" aria-labelledby="declared-title">
+      <div class="section-head"><h2 id="declared-title">App 包声明的数据目录</h2></div>
+      <p class="hint">来自主入口版本 App 包里的 <code>tinyhost.json</code>。</p>
+      <dl class="rows">
+        {{range $dir, $description := .Manifest.Data}}<div><dt><code class="dir">{{$dir}}</code></dt><dd>{{with $description}}{{.}}{{else}}<span class="muted">没有说明</span>{{end}}</dd></div>{{else}}<div class="rows-empty"><dt>未声明数据目录</dt></div>{{end}}
+      </dl>
+    </section>
+  </div>
+
+  <section class="section" aria-labelledby="settings-title">
+    <div class="section-head"><h2 id="settings-title">设置</h2></div>
+    <div class="settings">
+      <form class="setting" action="/apps/{{.App.Slug}}/visibility" method="post">
+        <div class="setting-text">
+          <h3>可见性</h3>
+          <p class="hint">公开：任何人都能打开。私有：只有登录过后台的浏览器能打开。版本链接也一样。</p>
+        </div>
+        <div class="setting-control">
+          <div class="seg">
+            <label><input type="radio" name="visibility" value="private"{{if eq .App.Visibility "private"}} checked{{end}}><span>{{template "i-lock"}}私有</span></label>
+            <label><input type="radio" name="visibility" value="public"{{if eq .App.Visibility "public"}} checked{{end}}><span>{{template "i-globe"}}公开</span></label>
+          </div>
+          <button class="btn">保存</button>
+        </div>
+      </form>
+      <form class="setting" action="/apps/{{.App.Slug}}/rename" method="post">
+        <div class="setting-text">
+          <h3>slug</h3>
+          <p class="hint">改名后旧地址（包括旧的版本地址）永久跳转到新地址，旧 slug 不能再分配给别的 App。</p>
+        </div>
+        <div class="setting-control">
+          <input class="input mono" name="slug" value="{{.App.Slug}}" aria-label="新 slug" required minlength="3" maxlength="40" pattern="[a-z0-9]+(-[a-z0-9]+)*" autocomplete="off" spellcheck="false">
+          <button class="btn">改名</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="events-title">
+    <div class="section-head"><h2 id="events-title">最近操作</h2><a class="more" href="/events?app={{.App.ID}}">全部记录</a></div>
+    {{template "audit" .Events}}
+  </section>
+
+  <section class="section danger-zone" aria-labelledby="danger-title">
+    <h2 id="danger-title">危险操作</h2>
+    <div class="setting">
+      <div class="setting-text">
+        <h3>删除 App</h3>
+        <p class="hint">移入回收站，主入口和所有版本链接立即失效。在回收站里可以恢复，到期后自动清理。</p>
+      </div>
+      <form class="setting-control" action="/apps/{{.App.Slug}}/delete" method="post" data-confirm="删除 {{.App.Slug}} 并移入回收站？"><button class="btn btn-danger">删除 App</button></form>
+    </div>
+  </section>
+</main>
+</body>
+</html>
