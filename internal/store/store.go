@@ -31,7 +31,7 @@ type Store struct {
 }
 
 type Client struct {
-	ID, Name, TokenHash, Meta         string
+	ID, Name, TokenHash, Meta        string
 	CreatedAt                        int64
 	ExpiresAt, RevokedAt, LastUsedAt *int64
 	LastUsedIP                       string
@@ -39,10 +39,10 @@ type Client struct {
 
 type App struct {
 	ID, Slug, Title, Visibility, CreatedBy string
-	CurrentVersion                        *int
-	NextVersion                           int
-	CreatedAt, UpdatedAt                  int64
-	DeletedAt                             *int64
+	CurrentVersion                         *int
+	NextVersion                            int
+	CreatedAt, UpdatedAt                   int64
+	DeletedAt                              *int64
 }
 
 type File struct {
