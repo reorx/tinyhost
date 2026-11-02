@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh">
+<head>{{template "head" "预览"}}</head>
+<body>
+{{template "nav" "previews"}}
+<main class="page">
+  <div class="page-head">
+    <h1>预览<span class="count">{{len .Previews}}</span></h1>
+    <p class="subtitle">所有 Agent 的临时预览。拿到链接即可查看，到期自动失效。</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>来源与链接</th><th>Agent</th><th>到期时间</th><th>状态</th><th>操作</th></tr></thead>
+    <tbody>{{range .Previews}}<tr>
+      <td class="primary"><a class="mono" href="{{.URL}}">{{if .Source}}{{.Source}}{{else}}{{.ID}}{{end}}</a><br><code>{{.ID}}</code></td>
+      <td data-label="Agent">{{.CreatorName}}</td>
+      <td data-label="到期"><time data-ts="{{.ExpiresAt}}" data-format="datetime">{{.ExpiresAt}}</time></td>
+      <td>{{if .Expired}}已过期{{else}}有效{{end}}</td>
+      <td class="full row-actions"><form action="/previews/{{.ID}}/delete" method="post" data-confirm="删除此预览？链接将立即失效。"><button class="btn btn-sm btn-danger">删除</button></form></td>
+    </tr>{{else}}<tr><td class="empty" colspan="5">暂无预览</td></tr>{{end}}</tbody>
+  </table></div>
+</main>
+</body>
+</html>

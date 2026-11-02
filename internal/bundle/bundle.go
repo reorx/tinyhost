@@ -33,11 +33,12 @@ type Options struct {
 }
 
 type Summary struct {
-	Files    int
-	Size     int64
-	Manifest Manifest
-	Skipped  []string
-	Warnings []string
+	Files        int
+	Size         int64
+	Manifest     Manifest
+	Skipped      []string
+	Warnings     []string
+	PathWarnings []Warning
 }
 
 func defaults(l Limits) Limits {

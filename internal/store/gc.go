@@ -30,7 +30,8 @@ func (s *Store) PurgeTrash(before time.Time) error {
 }
 
 const orphanPredicate = `NOT EXISTS (SELECT 1 FROM versions v WHERE v.base_layer=layers.id)
-	AND NOT EXISTS (SELECT 1 FROM version_overlays o WHERE o.layer=layers.id)`
+	AND NOT EXISTS (SELECT 1 FROM version_overlays o WHERE o.layer=layers.id)
+	AND NOT EXISTS (SELECT 1 FROM previews p WHERE p.layer=layers.id)`
 
 func (s *Store) OrphanLayers() ([]*Layer, error) {
 	rows, err := s.db.Query("SELECT id,file_count,total_size,created_at FROM layers WHERE " + orphanPredicate + " ORDER BY id")

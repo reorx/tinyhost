@@ -54,6 +54,21 @@ func (p *packer) add(src, name string, info fs.FileInfo) error {
 			return err
 		}
 	}
+	if checkable(name) && info.Size() <= 1<<20 && len(p.summary.PathWarnings) < 20 {
+		content, err := io.ReadAll(io.LimitReader(source, (1<<20)+1))
+		if err != nil {
+			return err
+		}
+		warnings := CheckAbsolutePaths(map[string][]byte{name: content})
+		remaining := 20 - len(p.summary.PathWarnings)
+		if len(warnings) > remaining {
+			warnings = warnings[:remaining]
+		}
+		p.summary.PathWarnings = append(p.summary.PathWarnings, warnings...)
+		if _, err = source.Seek(0, 0); err != nil {
+			return err
+		}
+	}
 	if err = p.writer.WriteHeader(&tar.Header{Name: name, Mode: 0644, Size: info.Size(), Typeflag: tar.TypeReg}); err != nil {
 		return err
 	}

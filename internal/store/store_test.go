@@ -60,7 +60,7 @@ func TestDatabaseReopensWithAllSchemaAndPragmas(t *testing.T) {
 		{key: "journal_mode", want: "wal"},
 		{key: "foreign_keys", want: 1},
 		{key: "busy_timeout", want: 5000},
-		{key: "user_version", want: 2},
+		{key: "user_version", want: 3},
 	} {
 		var value any
 		if err := store.db.QueryRow("PRAGMA " + test.key).Scan(&value); err != nil {
@@ -487,7 +487,7 @@ func TestFutureSchemasAreRejected(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := store.db.Exec("PRAGMA user_version=3"); err != nil {
+	if _, err := store.db.Exec("PRAGMA user_version=4"); err != nil {
 		t.Fatal(err)
 	}
 	if err := store.Close(); err != nil {

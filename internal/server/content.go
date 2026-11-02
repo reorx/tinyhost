@@ -97,6 +97,10 @@ func (s *Server) content(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	s.resolveContent(w, r, v, rest, number)
+}
+
+func (s *Server) resolveContent(w http.ResponseWriter, r *http.Request, v *store.Version, rest string, number int) {
 	// URL.Path is already decoded by net/http; never decode a second time.
 	// Reject traversal instead of normalizing across the app's URL boundary.
 	if strings.ContainsAny(rest, "\\\x00") {

@@ -14,6 +14,9 @@ func (s *Server) GC() error {
 	if err := s.Store.PruneAuth(s.now().Unix()); err != nil {
 		return err
 	}
+	if err := s.Store.PrunePreviews(s.now().Unix()); err != nil {
+		return err
+	}
 	keep := s.Config.DataVersionsKeep
 	if keep == 0 {
 		keep = 20

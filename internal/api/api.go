@@ -76,18 +76,19 @@ type DeleteResult struct {
 	TrashDays int    `json:"trash_days"`
 }
 type DeployResult struct {
-	App            string   `json:"app"`
-	Version        int      `json:"version"`
-	Kind           string   `json:"kind"`
-	DataDir        *string  `json:"data_dir"`
-	Files          int      `json:"files"`
-	Size           int64    `json:"size"`
-	VersionURL     string   `json:"version_url"`
-	MainURL        string   `json:"main_url"`
-	Promoted       bool     `json:"promoted"`
-	CurrentVersion *int     `json:"current_version"`
-	AppCreatedBy   string   `json:"app_created_by"`
-	Skipped        []string `json:"skipped"`
+	Warnings       []bundle.Warning `json:"warnings,omitempty"`
+	App            string           `json:"app"`
+	Version        int              `json:"version"`
+	Kind           string           `json:"kind"`
+	DataDir        *string          `json:"data_dir"`
+	Files          int              `json:"files"`
+	Size           int64            `json:"size"`
+	VersionURL     string           `json:"version_url"`
+	MainURL        string           `json:"main_url"`
+	Promoted       bool             `json:"promoted"`
+	CurrentVersion *int             `json:"current_version"`
+	AppCreatedBy   string           `json:"app_created_by"`
+	Skipped        []string         `json:"skipped"`
 }
 
 // VersionResult, HelpResult and SkillResult are local CLI output contracts.
@@ -132,4 +133,28 @@ type LoginResult struct {
 	ExpiresAt               *int64 `json:"expires_at,omitempty"`
 	UserCode                string `json:"user_code,omitempty"`
 	VerificationURIComplete string `json:"verification_uri_complete,omitempty"`
+}
+
+// PreviewResult is returned by preview uploads; links are public capabilities.
+type PreviewResult struct {
+	ID        string           `json:"id"`
+	URL       string           `json:"url"`
+	ExpiresAt int64            `json:"expires_at"`
+	Reused    bool             `json:"reused"`
+	Warnings  []bundle.Warning `json:"warnings,omitempty"`
+}
+type Preview struct {
+	ID        string `json:"id"`
+	URL       string `json:"url"`
+	Source    string `json:"source"`
+	ExpiresAt int64  `json:"expires_at"`
+	CreatedAt int64  `json:"created_at"`
+	UpdatedAt int64  `json:"updated_at"`
+}
+type PreviewsResult struct {
+	Previews []Preview `json:"previews"`
+}
+type DeletePreviewResult struct {
+	ID      string `json:"id"`
+	Deleted bool   `json:"deleted"`
 }

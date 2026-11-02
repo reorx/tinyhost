@@ -15,6 +15,7 @@
     {{template "brand"}}
     <nav class="nav" aria-label="后台导航">
       <a href="/"{{if eq . "apps"}} aria-current="page"{{end}}>App</a>
+      <a href="/previews"{{if eq . "previews"}} aria-current="page"{{end}}>预览</a>
       <a href="/trash"{{if eq . "trash"}} aria-current="page"{{end}}>回收站</a>
       <a href="/agents"{{if eq . "agents"}} aria-current="page"{{end}}>Agent</a>
       <a href="/events"{{if eq . "events"}} aria-current="page"{{end}}>操作记录</a>

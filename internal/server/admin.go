@@ -98,6 +98,8 @@ func (s *Server) adminHandler() http.Handler {
 	mux.HandleFunc("GET /agents", s.consoleAgents)
 	mux.HandleFunc("POST /agents", s.consoleIssueToken)
 	mux.HandleFunc("POST /agents/{id}/revoke", s.consoleRevokeAgent)
+	mux.HandleFunc("GET /previews", s.consolePreviews)
+	mux.HandleFunc("POST /previews/{id}/delete", s.consoleDeletePreview)
 	mux.HandleFunc("GET /events", s.consoleEvents)
 	mux.HandleFunc("GET /device", s.devicePage)
 	mux.HandleFunc("POST /device/{id}/approve", s.deviceDecision)

@@ -165,3 +165,37 @@ golden 快照位于 `internal/cli/testdata/golden/`，覆盖所有命令和代�
 `login [--name 名称] [--wait 60] [--force] --json` 输出 LoginResult：必有 status；可选 name、server、expires_at、user_code、verification_uri_complete。status 为 authorized / already_logged_in / environment / pending。pending 退出 4，其他成功退出 0；错误保持 Error DTO，拒绝和过期退出 1。JSON stdout 始终只有一个文档，授权链接和等待提示走 stderr。
 
 `logout --json` 输出 LogoutResult。whoami 的 JSON 字段保持 M1 契约，文本新增 token 到期时间（或永久）。credentials.json（0600）为 `{ "<server>": {token,client_id,name,expires_at} }`；pending-login.json（0600）为 `{server,device_code,user_code,verification_uri_complete,expires_at,interval?}`。更新文件使用同目录原子替换，保留其他服务器凭证。
+
+## M3 预览与路径警告
+
+| 方法 | 相对路径 | 请求 | 成功 / 错误 |
+|---|---|---|---|
+| POST | `/previews` | tar.gz；`key` 必填，`ttl` 默认 24h，`new=1` 可选，`source` 可选 | 201 `PreviewResult`；400 invalid_ttl / invalid_preview / bad_bundle，413 too_large |
+| GET | `/previews` | 无 | 200 `PreviewsResult`，仅调用者尚未过期的预览 |
+| DELETE | `/previews/{id}` | 无；也接受链接中的 token | 200 `DeletePreviewResult`；404 preview_not_found（包括其他 Agent 的预览） |
+
+`ttl` 使用 Go duration，包含端点的范围为 1h–168h，不接受 `30d`。`key` 在每个 client 内唯一，最长 1024 字节；source 最长 4096 字节，仅用于显示。相同 client/key 原子替换内容并重算到期时间，保留 id/url/created_at。`new=1` 忽略 key，随机生成独立 key，旧链接继续保留。不创建 App 或版本，不支持覆盖目录。包规则和 deploy 相同。
+
+`PreviewResult`：
+
+```json
+{"id":"p_example","url":"https://th.reorx.com/_p/k7f2m3xq4c5d3h5zabce/","expires_at":1793664000,"reused":false}
+```
+
+`PreviewsResult` 为 `{"previews":[Preview,...]}`，空列表为 `[]`；按 updated_at 降序、id 排序。Preview 字段为 id、url、source（CLI 上报来源路径的 basename）、created_at、updated_at、expires_at。内部 local_key、层 ID、client_id 不输出。`DeletePreviewResult` 为 `{"id":"p_example","deleted":true}`，删除立即使链接 404。
+
+预览链接不要求登录。20 位小写 base32 路径 token 含 100 bit 随机性，存储明文以便后台展示；它只授权读取预览，不授权写操作。内容沿用 M1 路径解析、ETag、HEAD 和 Range，使用 `Cache-Control: no-cache`、`X-Robots-Tag: noindex`。到期立即返回 410 和「这个预览已过期」页；GC 将层置 NULL，过期超过七天后删除记录并变为 404。GC 前的保留行也可用相同 key 更新恢复。
+
+CLI 新命令：
+
+| 命令 | 成功 DTO |
+|---|---|
+| `preview [路径] [--ttl 24h] [--new]` | `PreviewResult` |
+| `previews` | `PreviewsResult` |
+| `previews rm <链接或 ID>` | `DeletePreviewResult` |
+
+CLI 在配置目录保存 `previews.json`，形状为 `{ "<server>|<绝对路径>": "<local_key>" }`，0600，同目录临时文件原子替换。`--new` 轮换本地 key，后续普通 preview 沿用新链接，旧链接独立过期。key 在上传前保存，失败重试不会重复创建预览。删除链接时校验服务器 origin 和 20 位 token，然后由服务端解析为 ID 并检查创建者；拒绝其他服务器的链接。到期后的保留期内，ID 和链接都可用于删除。
+
+deploy、data push、preview 在打包时检查实际纳入上传的 `.html .htm .css .js .mjs` 文件（每文件不超过 1MiB），忽略远程、协议相对、data URI 和相对地址。警告按文件/行排序，每行一条、每文件最多五条、总共二十条；stderr 在上传前显示文件、行号、原文和相对路径建议，上传照常执行。
+
+`DeployResult` 和 `PreviewResult` 增加可选字段 `warnings?: [{"file":"index.html","line":1,"text":"<script src=\"/app.js\">"}]`，没有警告时省略。仅 CLI 本地生成此字段；HTTP 直传不会执行路径检查。原有 skipped、JSON 输出流和退出码语义保持不变。

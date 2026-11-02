@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "usage",
+    "hint": "运行 tinyhost help 查看用法",
+    "message": "预览有效期必须在 1h–168h 之间，例如 --ttl 24h"
+  }
+}

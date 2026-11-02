@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"time"
 
 	"github.com/reorx/tinyhost/internal/bundle"
@@ -76,6 +77,20 @@ type Version struct {
 func id(prefix string) string { return prefix + token.New()[3:] }
 
 func Open(path string) (*Store, error) {
+	// Preview URLs are plaintext capabilities. Secure both new and existing DBs
+	// before SQLite opens them; WAL files inherit the database permissions.
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0600)
+	if err != nil {
+		return nil, err
+	}
+	if err = file.Chmod(0600); err != nil {
+		file.Close()
+		return nil, err
+	}
+	if err = file.Close(); err != nil {
+		return nil, err
+	}
+
 	dsn := (&url.URL{Scheme: "file", Path: path}).String() +
 		"?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=foreign_keys(1)&_txlock=immediate"
 	db, err := sql.Open("sqlite", dsn)
@@ -102,8 +117,8 @@ func migrate(db *sql.DB) error {
 	if err = tx.QueryRow("PRAGMA user_version").Scan(&n); err != nil {
 		return err
 	}
-	if n > 2 {
-		return fmt.Errorf("database schema %d is newer than supported version 2", n)
+	if n > 3 {
+		return fmt.Errorf("database schema %d is newer than supported version 3", n)
 	}
 	if n == 0 {
 		if _, err = tx.Exec(schema); err != nil {
@@ -118,6 +133,14 @@ func migrate(db *sql.DB) error {
 			return err
 		}
 		if _, err = tx.Exec("PRAGMA user_version=2"); err != nil {
+			return err
+		}
+	}
+	if n < 3 {
+		if _, err = tx.Exec(previewSchema); err != nil {
+			return err
+		}
+		if _, err = tx.Exec("PRAGMA user_version=3"); err != nil {
 			return err
 		}
 	}

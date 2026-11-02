@@ -118,6 +118,9 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /_/api/v1/device/token", s.deviceToken)
 	mux.HandleFunc("POST /_/api/v1/logout", s.auth(s.agentLogout))
 	mux.HandleFunc("GET /_/api/v1/whoami", s.auth(s.whoami))
+	mux.HandleFunc("POST /_/api/v1/previews", s.auth(s.createPreview))
+	mux.HandleFunc("GET /_/api/v1/previews", s.auth(s.listPreviews))
+	mux.HandleFunc("DELETE /_/api/v1/previews/{id}", s.auth(s.deletePreview))
 	mux.HandleFunc("GET /_/api/v1/apps", s.auth(s.apps))
 	mux.HandleFunc("GET /_/api/v1/apps/{slug}", s.auth(s.info))
 	mux.HandleFunc("GET /_/api/v1/apps/{slug}/versions", s.auth(s.versions))
@@ -166,6 +169,10 @@ func (s *Server) Handler() http.Handler {
 		}
 		if r.URL.Path == "/_/auth" && (r.Method == "GET" || r.Method == "HEAD") {
 			s.redeemView(w, r)
+			return
+		}
+		if strings.HasPrefix(r.URL.Path, "/_p/") {
+			s.previewContent(w, r)
 			return
 		}
 		s.content(w, r)

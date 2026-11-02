@@ -1,0 +1,26 @@
+{
+  "app": "demo",
+  "app_created_by": "\u003cid\u003e",
+  "current_version": 1,
+  "data_dir": null,
+  "files": 4,
+  "kind": "app",
+  "main_url": "http://server.test/demo/",
+  "promoted": true,
+  "size": 77,
+  "skipped": [],
+  "version": 1,
+  "version_url": "http://server.test/demo@v1/",
+  "warnings": [
+    {
+      "file": "data/data.js",
+      "line": 1,
+      "text": "fetch('/data.json')"
+    },
+    {
+      "file": "index.html",
+      "line": 1,
+      "text": "\u003cscript src=\"/app.js\"\u003e\u003c/script\u003e"
+    }
+  ]
+}

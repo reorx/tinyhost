@@ -32,6 +32,15 @@ func (c *context) printHuman(value any) error {
 			fmt.Fprintf(&b, "  主入口仍指向 %s：%s\n", current(result.CurrentVersion), result.MainURL)
 		}
 		fmt.Fprintf(&b, "  创建者：%s\n", result.AppCreatedBy)
+	case api.PreviewResult:
+		fmt.Fprintf(&b, "✓ 预览已更新，%s 过期\n  %s\n", timestamp(result.ExpiresAt), result.URL)
+	case api.PreviewsResult:
+		fmt.Fprintf(&b, "有效预览：%d\n", len(result.Previews))
+		for _, p := range result.Previews {
+			fmt.Fprintf(&b, "%s  %s  %s  %s\n  %s\n", p.ID, p.Source, timestamp(p.ExpiresAt), "过期", p.URL)
+		}
+	case api.DeletePreviewResult:
+		fmt.Fprintf(&b, "✓ 预览 %s 已删除\n", result.ID)
 	case api.AppsResult:
 		w := tabwriter.NewWriter(&b, 0, 4, 2, ' ', 0)
 		fmt.Fprintln(w, "SLUG\t标题\t可见性\t当前版本\t创建者\t更新时间")

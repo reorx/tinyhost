@@ -1,0 +1,20 @@
+{
+  "previews": [
+    {
+      "created_at": "\u003ctime\u003e",
+      "expires_at": "\u003ctime\u003e",
+      "id": "\u003cid\u003e",
+      "source": "site",
+      "updated_at": "\u003ctime\u003e",
+      "url": "http://server.test/_p/\u003ctoken\u003e/"
+    },
+    {
+      "created_at": "\u003ctime\u003e",
+      "expires_at": "\u003ctime\u003e",
+      "id": "\u003cid\u003e",
+      "source": "site",
+      "updated_at": "\u003ctime\u003e",
+      "url": "http://server.test/_p/\u003ctoken\u003e/"
+    }
+  ]
+}

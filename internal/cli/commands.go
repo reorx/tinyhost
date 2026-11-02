@@ -171,9 +171,7 @@ func dataCommand(c *context, args []string, push bool) (any, error) {
 	return c.upload(path, query, packed, summary)
 }
 func (c *context) upload(path string, query url.Values, packed string, summary bundle.Summary) (api.DeployResult, error) {
-	for _, warning := range summary.Warnings {
-		fmt.Fprintln(c.stderr, "警告："+warning)
-	}
+	c.uploadWarnings(summary)
 	file, err := os.Open(packed)
 	if err != nil {
 		return api.DeployResult{}, err
@@ -181,6 +179,7 @@ func (c *context) upload(path string, query url.Values, packed string, summary b
 	defer file.Close()
 	var result api.DeployResult
 	err = c.request("POST", path, query, file, "application/gzip", &result)
+	result.Warnings = summary.PathWarnings
 	return result, err
 }
 func positionals(c *context, name string, args []string, count int) ([]string, error) {
