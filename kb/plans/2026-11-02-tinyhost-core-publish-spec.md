@@ -333,18 +333,18 @@ CREATE TABLE events (
 
 ### 实施步骤
 
-- [ ] 初始化：`mise use go@1.27`（生成 `mise.toml`）、`go mod init github.com/reorx/tinyhost`、`Makefile`（test / build）、`.gitignore`（`tmp/ dist/ data/`）
-- [ ] `internal/token`、`internal/slug`，先写测试
-- [ ] `internal/blob`，先写测试（去重、原子写、mtime 刷新）
-- [ ] `internal/store`：schema、迁移、查询，先写测试
-- [ ] `internal/bundle`：Pack / Unpack，先写测试（排除规则、路径安全、限制、单文件模式、tinyhost.json）
-- [ ] 把验收标准 1–12 写成 `internal/server` 的行为测试（此时全部失败）
-- [ ] 实现 Agent API 与内容托管，直到测试通过
-- [ ] GC 及测试（验收 7、11 的清理部分）
-- [ ] `cmd/tinyhost-server`：serve / token create / gc / version
-- [ ] `internal/cli` 命令及测试（golden 快照）
-- [ ] `docs/json-output.md`、`AGENTS.md`
-- [ ] 本地手动验收：起服务，用一个带 `data/` 的示例看板走完验收 1–6，截图存到 `tmp/<日期>-m1-core-publish/`
+- [x] 初始化：`mise use go@1.27`（生成 `mise.toml`）、`go mod init github.com/reorx/tinyhost`、`Makefile`（test / build）、`.gitignore`（`tmp/ dist/ data/`）
+- [x] `internal/token`、`internal/slug`，先写测试
+- [x] `internal/blob`，先写测试（去重、原子写、mtime 刷新）
+- [x] `internal/store`：schema、迁移、查询，先写测试
+- [x] `internal/bundle`：Pack / Unpack，先写测试（排除规则、路径安全、限制、单文件模式、tinyhost.json）
+- [x] 把验收标准 1–12 写成 `internal/server` 的行为测试（此时全部失败）
+- [x] 实现 Agent API 与内容托管，直到测试通过
+- [x] GC 及测试（验收 7、11 的清理部分）
+- [x] `cmd/tinyhost-server`：serve / token create / gc / version
+- [x] `internal/cli` 命令及测试（golden 快照）
+- [x] `docs/json-output.md`、`AGENTS.md`
+- [x] 本地手动验收：起服务，用一个带 `data/` 的示例看板走完验收 1–6，截图存到 `tmp/<日期>-m1-core-publish/`
 
 ### 测试与验证
 
