@@ -1,0 +1,60 @@
+name: Install acceptance
+
+# Installs the CLI from a running server on clean runners and checks it against
+# that server. Each run leaves one pending authorization request per platform.
+on:
+  workflow_dispatch:
+    inputs:
+      server:
+        description: Server (apps) URL
+        required: true
+        default: https://tinyhost.space
+      version:
+        description: Expected server and CLI version, without the leading v
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            platform: linux-amd64
+          - runner: ubuntu-24.04-arm
+            platform: linux-arm64
+          - runner: macos-latest
+            platform: darwin-arm64
+    runs-on: ${{ matrix.runner }}
+    env:
+      SERVER: ${{ inputs.server }}
+      VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run install acceptance
+        shell: bash
+        run: |
+          mkdir -p evidence
+          uname -sm | tee evidence/uname.txt
+          sh scripts/accept-install.sh "$SERVER" "$VERSION" "$RUNNER_TEMP/accept" 2>&1 | tee evidence/accept.log
+      - name: Collect evidence
+        if: always()
+        shell: bash
+        run: |
+          accept="$RUNNER_TEMP/accept"
+          # pending-login.json holds the device code, a secret; artifacts of a public repo are not.
+          rm -f "$accept/home/.config/tinyhost/pending-login.json" "$accept/home/Library/Application Support/tinyhost/pending-login.json"
+          for f in cli-skill.md http-skill.md login.json login-stderr.txt whoami-headers.txt; do
+            if [ -f "$accept/$f" ]; then cp "$accept/$f" evidence/; fi
+          done
+          if [ -x "$accept/home/.local/bin/tinyhost" ]; then
+            file "$accept/home/.local/bin/tinyhost" > evidence/cli-file.txt
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: install-${{ matrix.platform }}
+          path: evidence/

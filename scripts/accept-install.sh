@@ -16,6 +16,11 @@ cli="$home_dir/.local/bin/tinyhost"
 actual=$(env -i HOME="$home_dir" PATH="$PATH" "$cli" version)
 if [ "$actual" != "$expected" ]; then echo "版本不一致：$actual != $expected" >&2; exit 1; fi
 printf 'PASS version=%s\n' "$actual"
+# Every Agent API response carries the server build; an unauthenticated whoami is enough.
+curl -sS -D "$work/whoami-headers.txt" -o /dev/null "${server%/}/_/api/v1/whoami"
+server_version=$(awk 'tolower($1) == "x-tinyhost-version:" {print $2}' "$work/whoami-headers.txt" | tr -d '\r')
+if [ "$server_version" != "$expected" ]; then echo "服务器版本不一致：X-Tinyhost-Version=${server_version:-缺失} != $expected" >&2; exit 1; fi
+printf 'PASS server X-Tinyhost-Version=%s\n' "$server_version"
 env -i HOME="$home_dir" PATH="$PATH" "$cli" skill > "$work/cli-skill.md"
 curl -fsSL "${server%/}/skill.md" > "$work/http-skill.md"
 diff -u "$work/http-skill.md" "$work/cli-skill.md"
