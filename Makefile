@@ -5,3 +5,6 @@ test:
 	go test ./...
 build:
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" ./...
+.PHONY: dist
+dist:
+	sh scripts/dist.sh "$(VERSION)"

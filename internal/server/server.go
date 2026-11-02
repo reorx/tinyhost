@@ -15,8 +15,10 @@ import (
 
 	"github.com/reorx/tinyhost/internal/api"
 	"github.com/reorx/tinyhost/internal/blob"
+	"github.com/reorx/tinyhost/internal/distribution"
 	"github.com/reorx/tinyhost/internal/store"
 	"github.com/reorx/tinyhost/internal/token"
+	"github.com/reorx/tinyhost/internal/version"
 )
 
 type Config struct {
@@ -24,6 +26,7 @@ type Config struct {
 	MaxUploadMB, MaxFiles, DataVersionsKeep, TrashDays int
 	TrustedProxyHeader                                 string
 	InsecureCookies                                    bool
+	ReleaseRepo, DLDir, DLCacheDir                     string
 }
 
 func (c Config) Validate() error {
@@ -114,6 +117,7 @@ func (w *responseLog) Unwrap() http.ResponseWriter { return w.ResponseWriter }
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	adminHandler := s.adminHandler()
+	downloads := &distribution.Proxy{Version: version.Version, ReleaseRepo: s.Config.ReleaseRepo, LocalDir: s.Config.DLDir, CacheDir: s.Config.DLCacheDir}
 	mux.HandleFunc("POST /_/api/v1/device/code", s.deviceCode)
 	mux.HandleFunc("POST /_/api/v1/device/token", s.deviceToken)
 	mux.HandleFunc("POST /_/api/v1/logout", s.auth(s.agentLogout))
@@ -163,8 +167,12 @@ func (s *Server) Handler() http.Handler {
 			return
 		}
 		if strings.HasPrefix(r.URL.Path, "/_/api/v1/") {
+			w.Header().Set("X-Tinyhost-Version", version.Version)
 			w.Header().Set("Cache-Control", "no-store")
 			mux.ServeHTTP(w, r)
+			return
+		}
+		if s.distribution(w, r, downloads) {
 			return
 		}
 		if r.URL.Path == "/_/auth" && (r.Method == "GET" || r.Method == "HEAD") {
@@ -227,12 +235,15 @@ func client(r *http.Request) *store.Client {
 	return r.Context().Value(stateKey{}).(*requestState).client
 }
 func (s *Server) event(r *http.Request, action, app string, detail any) {
+	s.recordEvent(Event{Actor: client(r).ID, Action: action, AppID: app}, detail)
+}
+func (s *Server) recordEvent(e Event, detail any) {
 	data, err := json.Marshal(detail)
 	if err != nil {
 		s.logger().Error("encode event", "error", err)
 		return
 	}
-	e := Event{Actor: client(r).ID, Action: action, AppID: app, Detail: string(data)}
+	e.Detail = string(data)
 	if err = s.Store.AddEvent(e.Actor, e.Action, e.AppID, e.Detail); err != nil {
 		s.logger().Error("record event", "error", err)
 		return

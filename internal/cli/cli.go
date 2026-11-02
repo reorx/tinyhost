@@ -25,6 +25,8 @@ type context struct {
 	pending        bool
 	requestTimeout time.Duration
 	server         string
+	remoteVersion  string
+	remoteOrigin   string
 }
 type commandError struct {
 	detail api.ErrorDetail
@@ -52,6 +54,7 @@ func find(name string) *command {
 // stdout; human errors and non-fatal packaging/writeback warnings go to stderr.
 func Run(args []string, stdout, stderr io.Writer) int {
 	c := &context{stdout: stdout, stderr: stderr}
+	defer c.upgradeHint()
 	result, err := c.execute(args)
 	if err == nil {
 		if c.json {

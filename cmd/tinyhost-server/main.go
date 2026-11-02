@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/reorx/tinyhost/internal/blob"
+	"github.com/reorx/tinyhost/internal/notify"
 	"github.com/reorx/tinyhost/internal/server"
 	"github.com/reorx/tinyhost/internal/store"
 	"github.com/reorx/tinyhost/internal/token"
@@ -69,7 +70,7 @@ func env(key, fallback string) string {
 }
 
 // Use FlagSet.Set so malformed environment defaults fail like malformed flags.
-func flags(name string, args []string, c *server.Config) (string, string, error) {
+func flags(name string, args []string, c *server.Config, notifications ...*notify.Config) (string, string, error) {
 	fs := flag.NewFlagSet(name, flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	var dir, listen string
@@ -83,6 +84,16 @@ func flags(name string, args []string, c *server.Config) (string, string, error)
 	fs.IntVar(&c.TrashDays, "trash-days", 7, "")
 	fs.StringVar(&c.TrustedProxyHeader, "trusted-proxy-header", "", "")
 	fs.BoolVar(&c.InsecureCookies, "insecure-cookies", false, "")
+	fs.StringVar(&c.ReleaseRepo, "release-repo", "reorx/tinyhost", "GitHub owner/repo")
+	fs.StringVar(&c.DLDir, "dl-dir", "", "local release artifact directory")
+	n := &notify.Config{}
+	if len(notifications) > 0 {
+		n = notifications[0]
+	}
+	fs.StringVar(&n.NtfyURL, "ntfy-url", "", "ntfy topic URL")
+	fs.StringVar(&n.NtfyToken, "ntfy-token", "", "ntfy bearer token")
+	fs.StringVar(&n.WebhookURL, "webhook-url", "", "notification webhook URL")
+	fs.StringVar(&n.Events, "notify-events", notify.DefaultEvents, "comma-separated event names")
 	var envErr error
 	fs.VisitAll(func(f *flag.Flag) {
 		key := "TINYHOST_" + strings.ToUpper(strings.ReplaceAll(f.Name, "-", "_"))
@@ -116,6 +127,7 @@ func openServer(dir string, c server.Config) (*server.Server, error) {
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return nil, err
 	}
+	c.DLCacheDir = filepath.Join(dir, "dl", strings.TrimPrefix(version.Version, "v"))
 	db, err := store.Open(filepath.Join(dir, "tinyhost.db"))
 	if err != nil {
 		return nil, err
@@ -129,7 +141,8 @@ func openServer(dir string, c server.Config) (*server.Server, error) {
 }
 func serve(args []string, out io.Writer) error {
 	var c server.Config
-	dir, listen, err := flags("serve", args, &c)
+	var notifications notify.Config
+	dir, listen, err := flags("serve", args, &c, &notifications)
 	if err != nil {
 		return err
 	}
@@ -144,6 +157,9 @@ func serve(args []string, out io.Writer) error {
 		return err
 	}
 	defer s.Store.Close()
+	hub := notify.New(notifications, s.Logger)
+	defer hub.Close()
+	s.OnEvent = notificationCallback(s, hub)
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	gcDone := make(chan struct{})

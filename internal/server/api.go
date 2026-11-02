@@ -197,7 +197,7 @@ func (s *Server) deploy(w http.ResponseWriter, r *http.Request) {
 		s.mutationError(w, a, err)
 		return
 	}
-	s.event(r, "app.deployed", a.ID, map[string]any{"version": v.Number})
+	s.event(r, "app.deployed", a.ID, map[string]any{"version": v.Number, "message": v.Message})
 	s.deployed(w, a, v, summary, promote)
 }
 func (s *Server) data(w http.ResponseWriter, r *http.Request) {

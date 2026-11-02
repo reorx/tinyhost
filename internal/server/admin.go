@@ -127,13 +127,13 @@ func (s *Server) adminMiddleware(next http.Handler) http.Handler {
 		if r.Method == "POST" {
 			origin := r.Header.Get("Origin")
 			if (origin != "" && origin != strings.TrimRight(s.Config.AdminURL, "/")) || (origin == "" && r.Header.Get("Sec-Fetch-Site") != "same-origin") {
-				http.Error(w, "Origin 不匹配", 403)
+				s.adminError(w, "Origin 不匹配", 403)
 				return
 			}
 		}
 		password, err := s.Store.Setting("owner_password_hash")
 		if err != nil {
-			s.internal(w, err)
+			s.adminInternal(w, err)
 			return
 		}
 		if password == "" {
@@ -143,14 +143,14 @@ func (s *Server) adminMiddleware(next http.Handler) http.Handler {
 		if r.URL.Path != "/login" && !strings.HasPrefix(r.URL.Path, "/static/") {
 			ok, err := s.hasSession(r, "admin")
 			if err != nil {
-				s.internal(w, err)
+				s.adminInternal(w, err)
 				return
 			}
 			if !ok {
 				if r.Method == "GET" || r.Method == "HEAD" {
 					http.Redirect(w, r, "/login?next="+url.QueryEscape(r.URL.RequestURI()), 302)
 				} else {
-					http.Error(w, "需要登录", 401)
+					s.adminError(w, "需要登录", 401)
 				}
 				return
 			}
@@ -163,17 +163,17 @@ func (s *Server) loginPage(w http.ResponseWriter, r *http.Request) {
 }
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	if !s.allowRate("login:"+s.requestIP(r), 5) || !s.allowRate("login-global", 30) {
-		http.Error(w, "登录过于频繁", 429)
+		s.adminError(w, "登录过于频繁", 429)
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 16384)
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, "无效表单", 400)
+		s.adminError(w, "无效表单", 400)
 		return
 	}
 	hash, err := s.Store.Setting("owner_password_hash")
 	if err != nil {
-		s.internal(w, err)
+		s.adminInternal(w, err)
 		return
 	}
 	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(r.FormValue("password"))) != nil {
@@ -183,7 +183,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	}
 	plain := token.New()
 	if err = s.Store.CreateSession(token.Hash(plain), "admin", s.requestIP(r), r.UserAgent(), s.now().Unix()); err != nil {
-		s.internal(w, err)
+		s.adminInternal(w, err)
 		return
 	}
 	s.sessionCookie(w, "admin", plain, false)
@@ -201,7 +201,7 @@ func (s *Server) adminLogout(w http.ResponseWriter, r *http.Request) {
 		err = s.Store.DeleteSession(token.Hash(c.Value))
 	}
 	if err != nil {
-		s.internal(w, err)
+		s.adminInternal(w, err)
 		return
 	}
 	s.ownerEvent("owner.logged_out", nil)
@@ -231,7 +231,7 @@ func (s *Server) devicePage(w http.ResponseWriter, r *http.Request) {
 	code := strings.ToUpper(strings.NewReplacer("-", "", " ", "").Replace(r.URL.Query().Get("code")))
 	d, err := s.Store.DeviceByCode(code)
 	if err != nil {
-		s.internal(w, err)
+		s.adminInternal(w, err)
 		return
 	}
 	msg := ""
@@ -254,7 +254,7 @@ func (s *Server) devicePage(w http.ResponseWriter, r *http.Request) {
 func (s *Server) deviceDecision(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, 16384)
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, "无效表单", 400)
+		s.adminError(w, "无效表单", 400)
 		return
 	}
 	status := "denied"
@@ -263,7 +263,7 @@ func (s *Server) deviceDecision(w http.ResponseWriter, r *http.Request) {
 	if strings.HasSuffix(r.URL.Path, "/approve") {
 		status = "approved"
 		if name == "" || len(name) > 256 {
-			http.Error(w, "需要名称", 400)
+			s.adminError(w, "需要名称", 400)
 			return
 		}
 		seconds := int64(30 * 86400)
@@ -274,7 +274,7 @@ func (s *Server) deviceDecision(w http.ResponseWriter, r *http.Request) {
 		case "forever":
 			seconds = 0
 		default:
-			http.Error(w, "无效有效期", 400)
+			s.adminError(w, "无效有效期", 400)
 			return
 		}
 		if seconds != 0 {
@@ -282,7 +282,7 @@ func (s *Server) deviceDecision(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if err := s.Store.DecideDevice(r.PathValue("id"), status, name, ttl, s.now().Unix()); err != nil {
-		http.Error(w, err.Error(), 400)
+		s.adminError(w, err.Error(), 400)
 		return
 	}
 	s.ownerEvent("agent."+status, struct {
@@ -298,12 +298,12 @@ func (s *Server) deviceDecision(w http.ResponseWriter, r *http.Request) {
 func (s *Server) viewAuth(w http.ResponseWriter, r *http.Request) {
 	next := r.URL.Query().Get("next")
 	if !safeNext(next) {
-		http.Error(w, "无效 next", 400)
+		s.adminError(w, "无效 next", 400)
 		return
 	}
 	plain := token.New()
 	if err := s.Store.CreateTicket(token.Hash(plain), next, s.now().Unix()); err != nil {
-		s.internal(w, err)
+		s.adminInternal(w, err)
 		return
 	}
 	http.Redirect(w, r, strings.TrimRight(s.Config.AppsURL, "/")+"/_/auth?"+url.Values{"ticket": {plain}, "next": {next}}.Encode(), 302)

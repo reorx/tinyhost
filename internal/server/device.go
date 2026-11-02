@@ -106,6 +106,7 @@ func (s *Server) deviceCode(w http.ResponseWriter, r *http.Request) {
 	}
 	display := code[:4] + "-" + code[4:]
 	uri := strings.TrimRight(s.Config.AdminURL, "/") + "/device"
+	s.recordEvent(Event{Actor: "device", Action: "device.requested"}, map[string]string{"name": input.Name, "hostname": input.Hostname, "ip": s.requestIP(r), "code": display, "url": uri + "?code=" + display})
 	writeJSON(w, 200, api.DeviceCodeResult{DeviceCode: plain, UserCode: display, VerificationURI: uri, VerificationURIComplete: uri + "?code=" + display, ExpiresIn: 600, Interval: 3})
 }
 func (s *Server) deviceToken(w http.ResponseWriter, r *http.Request) {

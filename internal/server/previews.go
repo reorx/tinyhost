@@ -137,12 +137,12 @@ type PreviewsView struct{ Previews []PreviewRow }
 func (s *Server) consolePreviews(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.Store.Previews("", s.now().Unix())
 	if err != nil {
-		s.internal(w, err)
+		s.adminInternal(w, err)
 		return
 	}
 	names, err := s.creatorNames()
 	if err != nil {
-		s.internal(w, err)
+		s.adminInternal(w, err)
 		return
 	}
 	view := PreviewsView{Previews: []PreviewRow{}}
@@ -156,11 +156,11 @@ func (s *Server) consoleDeletePreview(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	deleted, err := s.Store.DeletePreview(id, "")
 	if err != nil {
-		s.internal(w, err)
+		s.adminInternal(w, err)
 		return
 	}
 	if !deleted {
-		http.NotFound(w, r)
+		s.adminError(w, "预览不存在", 404)
 		return
 	}
 	s.ownerEvent("preview.deleted", map[string]string{"preview_id": id})

@@ -4,7 +4,7 @@
 
 ## HTTP API
 
-基地址为 apps origin 下的 `/_/api/v1`。除 device/code 和 device/token 外，所有端点仅接受 `Authorization: Bearer <token>`；cookie 不参与鉴权，不开放 CORS。撤销或到期的 token 返回 401。响应 JSON 使用 UTF-8，API 响应为 `Cache-Control: no-store`，不返回 hash；只有设备轮询成功时返回一次 token。GET 同时支持 HEAD。
+基地址为 apps origin 下的 `/_/api/v1`。除 device/code 和 device/token 外，所有端点仅接受 `Authorization: Bearer <token>`；cookie 不参与鉴权，不开放 CORS。撤销或到期的 token 返回 401。响应 JSON 使用 UTF-8，API 响应为 `Cache-Control: no-store`，不返回 hash；只有设备轮询成功时返回一次 token。GET 同时支持 HEAD。所有 Agent API 响应（包括错误、未知路径和方法）带 `X-Tinyhost-Version`，值为服务端构建版本。
 
 | 方法 | 相对路径 | 请求 | 成功状态 / DTO | 业务错误 |
 |---|---|---|---|---|
@@ -134,13 +134,13 @@ CLI 直接序列化下表的 `internal/api` DTO，不包装额外的 success、r
 | `whoami` | `WhoamiResult`；文本模式另显示所连接的服务器地址 |
 | `version` | `VersionResult`：`{"version":"dev"}`，值由构建注入 |
 | `help`、无命令、`--help` | `HelpResult`：`{"help":"AGENTS: run ...\n..."}` |
-| `skill` | `SkillResult`：`{"skill":"..."}`；M2 包含登录说明，M3 补全其他正文 |
+| `skill` | `SkillResult`：`{"skill":"..."}`；包含 frontmatter 的完整说明，渲染当前配置的服务器地址和 CLI 构建版本；离线且未配置时使用 `https://<your-tinyhost-server>` |
 
 本地错误也使用 `Error` DTO。远端业务错误保留服务端的 code/message/hint 和可选上下文字段。CLI 本地 code：`usage`（参数或配置地址用法错误）、`unauthorized`（缺少 token）、`slug_invalid`（本地 slug 校验失败）、`cli_error`（打包、配置读取、网络、响应解析等一般错误）。hint 可以为空字符串。
 
 | 退出码 | 含义 |
 |---|---|
-| 0 | 成功；包括帮助和 skill 占位说明 |
+| 0 | 成功；包括帮助和 skill 使用说明 |
 | 1 | 一般错误，含发布/查询业务失败、打包失败、网络错误和输出失败 |
 | 2 | 用法错误：未知命令/参数、位置参数数量错误、缺少 --app、非法 vN 或服务器地址 |
 | 3 | 未授权：缺少凭证，或服务端 HTTP 401（无效/撤销/过期 token） |
@@ -151,6 +151,8 @@ CLI 直接序列化下表的 `internal/api` DTO，不包装额外的 success、r
 `deploy --create` 成功后才写回本地 tinyhost.json；写回失败时发布已经生效，因此仍输出成功 DTO、退出 0，并在 stderr 提示显式传 --app，避免重试生成重复版本。符号链接的打包跳过警告也只进 stderr。stdout 写入失败退出 1，管道读端可能已无法接收错误 JSON。
 
 golden 快照位于 `internal/cli/testdata/golden/`，覆盖所有命令和代表性错误；仅屏蔽随机 ID、时间和本地测试服务器端口，保留字段、null、数组、版本和统计值。更新：`mise exec -- go test ./internal/cli -update`。
+
+CLI 根据 `X-Tinyhost-Version` 比较语义版本；自己较旧时在 stderr 末尾提示 `curl -fsSL <server>/install.sh | sh`。dev 或无法解析的开发版本不提示；不改变 stdout JSON 和退出码。`GET /skill.md` 与同版本、同服务器配置的 `tinyhost skill` 使用同一份模板渲染。
 
 ## M2 设备授权与 CLI 登录
 

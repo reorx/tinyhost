@@ -15,6 +15,8 @@ import (
 	"github.com/reorx/tinyhost/internal/api"
 )
 
+var errServerNotConfigured = usage("请用 --server、TINYHOST_SERVER 或 config.json 设置服务器地址")
+
 func (c *context) serverURL() (string, error) {
 	raw := c.server
 	if raw == "" {
@@ -41,7 +43,7 @@ func (c *context) serverURL() (string, error) {
 		}
 	}
 	if raw == "" {
-		return "", usage("请用 --server、TINYHOST_SERVER 或 config.json 设置服务器地址")
+		return "", errServerNotConfigured
 	}
 	u, err := url.Parse(raw)
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.User != nil || (u.Path != "" && u.Path != "/") || u.RawQuery != "" || u.Fragment != "" {
@@ -86,6 +88,8 @@ func (c *context) httpRequest(method, path string, query url.Values, body io.Rea
 		return err
 	}
 	defer response.Body.Close()
+	c.remoteVersion = response.Header.Get("X-Tinyhost-Version")
+	c.remoteOrigin = origin
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		var failure api.Error
 		if err = json.NewDecoder(io.LimitReader(response.Body, 1<<20)).Decode(&failure); err != nil || failure.Error.Code == "" {

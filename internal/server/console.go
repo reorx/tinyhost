@@ -55,10 +55,10 @@ type EventsView struct {
 	AppFilter string
 }
 
-func consoleForm(w http.ResponseWriter, r *http.Request) bool {
+func (s *Server) consoleForm(w http.ResponseWriter, r *http.Request) bool {
 	r.Body = http.MaxBytesReader(w, r.Body, 16384)
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, "无效表单", 400)
+		s.adminError(w, "无效表单", 400)
 		return false
 	}
 	return true
@@ -66,13 +66,13 @@ func consoleForm(w http.ResponseWriter, r *http.Request) bool {
 func (s *Server) consoleError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, store.ErrAppNotFound), errors.Is(err, store.ErrVersionNotFound), errors.Is(err, store.ErrOverlayNotFound):
-		http.Error(w, err.Error(), 404)
+		s.adminError(w, err.Error(), 404)
 	case errors.Is(err, store.ErrSlugTaken), errors.Is(err, store.ErrCurrentVersion), errors.Is(err, store.ErrOverlayConflict):
-		http.Error(w, err.Error(), 409)
+		s.adminError(w, err.Error(), 409)
 	case errors.Is(err, store.ErrInvalidInput):
-		http.Error(w, err.Error(), 400)
+		s.adminError(w, err.Error(), 400)
 	default:
-		s.internal(w, err)
+		s.adminInternal(w, err)
 	}
 }
 func (s *Server) creatorNames() (map[string]string, error) {
@@ -95,17 +95,17 @@ func actorName(names map[string]string, id string) string {
 func (s *Server) consoleHome(w http.ResponseWriter, r *http.Request) {
 	apps, err := s.Store.ListApps()
 	if err != nil {
-		s.internal(w, err)
+		s.adminInternal(w, err)
 		return
 	}
 	pending, err := s.Store.PendingDevices(s.now().Unix())
 	if err != nil {
-		s.internal(w, err)
+		s.adminInternal(w, err)
 		return
 	}
 	names, err := s.creatorNames()
 	if err != nil {
-		s.internal(w, err)
+		s.adminInternal(w, err)
 		return
 	}
 	view := HomeView{Ready: true, Pending: pending, Apps: []AppRow{}}
@@ -115,7 +115,7 @@ func (s *Server) consoleHome(w http.ResponseWriter, r *http.Request) {
 	s.render(w, "home.html", view)
 }
 func (s *Server) consoleCreateApp(w http.ResponseWriter, r *http.Request) {
-	if !consoleForm(w, r) {
+	if !s.consoleForm(w, r) {
 		return
 	}
 	name := r.PostForm.Get("slug")
@@ -125,18 +125,18 @@ func (s *Server) consoleCreateApp(w http.ResponseWriter, r *http.Request) {
 	}
 	title := r.PostForm.Get("title")
 	if !slug.Valid(name) || (visibility != "public" && visibility != "private") || len(title) > 1024 {
-		http.Error(w, "slug、标题或可见性不合法", 400)
+		s.adminError(w, "slug、标题或可见性不合法", 400)
 		return
 	}
 	a, err := s.Store.CreateApp(name, title, visibility, "owner")
 	if err != nil {
 		owner, lookupErr := s.Store.SlugOwner(name)
 		if lookupErr != nil {
-			s.internal(w, lookupErr)
+			s.adminInternal(w, lookupErr)
 		} else if owner != nil {
-			http.Error(w, "slug 已被占用", 409)
+			s.adminError(w, "slug 已被占用", 409)
 		} else {
-			s.internal(w, err)
+			s.adminInternal(w, err)
 		}
 		return
 	}
@@ -146,23 +146,23 @@ func (s *Server) consoleCreateApp(w http.ResponseWriter, r *http.Request) {
 func (s *Server) consoleApp(w http.ResponseWriter, r *http.Request) {
 	s.lifecycle.RLock()
 	defer s.lifecycle.RUnlock()
-	a := s.findApp(w, r)
+	a := s.consoleFindApp(w, r)
 	if a == nil {
 		return
 	}
 	versions, err := s.Store.Versions(a.ID)
 	if err != nil {
-		s.internal(w, err)
+		s.adminInternal(w, err)
 		return
 	}
 	names, err := s.creatorNames()
 	if err != nil {
-		s.internal(w, err)
+		s.adminInternal(w, err)
 		return
 	}
 	events, err := s.Store.Events(a.ID)
 	if err != nil {
-		s.internal(w, err)
+		s.adminInternal(w, err)
 		return
 	}
 	view := AppView{App: a, MainURL: s.mainURL(a.Slug), CreatorName: actorName(names, a.CreatedBy), Events: events, Versions: []VersionRow{}, Overlays: []OverlayRow{}}
@@ -186,10 +186,10 @@ func (s *Server) consoleApp(w http.ResponseWriter, r *http.Request) {
 func (s *Server) consoleAppAction(w http.ResponseWriter, r *http.Request) {
 	s.lifecycle.RLock()
 	defer s.lifecycle.RUnlock()
-	if !consoleForm(w, r) {
+	if !s.consoleForm(w, r) {
 		return
 	}
-	a := s.findApp(w, r)
+	a := s.consoleFindApp(w, r)
 	if a == nil {
 		return
 	}
@@ -212,7 +212,7 @@ func (s *Server) consoleAppAction(w http.ResponseWriter, r *http.Request) {
 	case strings.HasSuffix(r.URL.Path, "/promote"):
 		n, parseErr := strconv.Atoi(r.PostForm.Get("version"))
 		if parseErr != nil || n <= 0 {
-			http.Error(w, "无效版本号", 400)
+			s.adminError(w, "无效版本号", 400)
 			return
 		}
 		err = s.Store.Promote(a.ID, n)
@@ -221,7 +221,7 @@ func (s *Server) consoleAppAction(w http.ResponseWriter, r *http.Request) {
 	case r.PathValue("n") != "":
 		n, parseErr := strconv.Atoi(r.PathValue("n"))
 		if parseErr != nil || n <= 0 {
-			http.Error(w, "无效版本号", 400)
+			s.adminError(w, "无效版本号", 400)
 			return
 		}
 		err = s.Store.DeleteVersion(a.ID, n)
@@ -230,7 +230,7 @@ func (s *Server) consoleAppAction(w http.ResponseWriter, r *http.Request) {
 	case strings.HasSuffix(r.URL.Path, "/data/remove"):
 		dir, parseErr := store.NormalizeOverlayDir(r.PostForm.Get("dir"))
 		if parseErr != nil {
-			http.Error(w, parseErr.Error(), 400)
+			s.adminError(w, parseErr.Error(), 400)
 			return
 		}
 		var v *store.Version
@@ -255,7 +255,7 @@ func (s *Server) consoleAppAction(w http.ResponseWriter, r *http.Request) {
 func (s *Server) consoleTrash(w http.ResponseWriter, r *http.Request) {
 	apps, err := s.Store.TrashApps()
 	if err != nil {
-		s.internal(w, err)
+		s.adminInternal(w, err)
 		return
 	}
 	view := TrashView{Apps: []TrashRow{}}
@@ -271,11 +271,11 @@ func (s *Server) consoleTrashAction(w http.ResponseWriter, r *http.Request) {
 	defer s.lifecycle.RUnlock()
 	a, err := s.Store.AppByID(r.PathValue("id"))
 	if err != nil {
-		s.internal(w, err)
+		s.adminInternal(w, err)
 		return
 	}
 	if a == nil || a.DeletedAt == nil {
-		http.NotFound(w, r)
+		s.adminError(w, "页面不存在", 404)
 		return
 	}
 	action := "app.restored"
@@ -314,18 +314,18 @@ func (s *Server) agentRows() ([]AgentRow, error) {
 func (s *Server) consoleAgents(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.agentRows()
 	if err != nil {
-		s.internal(w, err)
+		s.adminInternal(w, err)
 		return
 	}
 	s.render(w, "agents.html", AgentsView{Agents: rows})
 }
 func (s *Server) consoleIssueToken(w http.ResponseWriter, r *http.Request) {
-	if !consoleForm(w, r) {
+	if !s.consoleForm(w, r) {
 		return
 	}
 	name := strings.TrimSpace(r.PostForm.Get("name"))
 	if name == "" || len(name) > 256 {
-		http.Error(w, "需要名称（最多 256 字节）", 400)
+		s.adminError(w, "需要名称（最多 256 字节）", 400)
 		return
 	}
 	var expires *int64
@@ -337,7 +337,7 @@ func (s *Server) consoleIssueToken(w http.ResponseWriter, r *http.Request) {
 	case "forever":
 		seconds = 0
 	default:
-		http.Error(w, "无效有效期", 400)
+		s.adminError(w, "无效有效期", 400)
 		return
 	}
 	if seconds != 0 {
@@ -347,13 +347,13 @@ func (s *Server) consoleIssueToken(w http.ResponseWriter, r *http.Request) {
 	plain := token.New()
 	c, err := s.Store.CreateClient(name, token.Hash(plain), expires)
 	if err != nil {
-		s.internal(w, err)
+		s.adminInternal(w, err)
 		return
 	}
 	s.ownerEvent("agent.issued", map[string]any{"client_id": c.ID, "name": c.Name})
 	rows, err := s.agentRows()
 	if err != nil {
-		s.internal(w, err)
+		s.adminInternal(w, err)
 		return
 	}
 	s.render(w, "agents.html", AgentsView{Agents: rows, Token: plain, IssuedName: c.Name, ExpiresAt: expires})
@@ -361,7 +361,7 @@ func (s *Server) consoleIssueToken(w http.ResponseWriter, r *http.Request) {
 func (s *Server) consoleRevokeAgent(w http.ResponseWriter, r *http.Request) {
 	clients, err := s.Store.Clients()
 	if err != nil {
-		s.internal(w, err)
+		s.adminInternal(w, err)
 		return
 	}
 	var found *store.Client
@@ -372,11 +372,11 @@ func (s *Server) consoleRevokeAgent(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if found == nil {
-		http.NotFound(w, r)
+		s.adminError(w, "页面不存在", 404)
 		return
 	}
 	if err = s.Store.RevokeClient(found.ID); err != nil {
-		s.internal(w, err)
+		s.adminInternal(w, err)
 		return
 	}
 	s.ownerEvent("agent.revoked", map[string]any{"client_id": found.ID, "name": found.Name})
@@ -386,12 +386,12 @@ func (s *Server) consoleEvents(w http.ResponseWriter, r *http.Request) {
 	filter := r.URL.Query().Get("app")
 	events, err := s.Store.Events(filter)
 	if err != nil {
-		s.internal(w, err)
+		s.adminInternal(w, err)
 		return
 	}
 	apps, err := s.Store.ListApps()
 	if err != nil {
-		s.internal(w, err)
+		s.adminInternal(w, err)
 		return
 	}
 	s.render(w, "events.html", EventsView{Events: events, Apps: apps, AppFilter: filter})

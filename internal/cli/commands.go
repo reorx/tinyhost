@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"net/url"
@@ -30,7 +31,7 @@ func init() {
 	register(&command{Name: "whoami", Summary: "查看当前 Agent 和服务器", Run: whoami})
 	register(&command{Name: "version", Summary: "显示 CLI 版本", Run: localVersion})
 	register(&command{Name: "help", Summary: "显示帮助", Run: help})
-	register(&command{Name: "skill", Summary: "显示 Agent 使用说明（M3 补全）", Run: skillCommand})
+	register(&command{Name: "skill", Summary: "显示 Agent 使用说明", Run: skillCommand})
 }
 func deploy(c *context, args []string) (any, error) {
 	fs := c.flags("deploy")
@@ -267,5 +268,14 @@ func help(c *context, args []string) (any, error) {
 }
 func skillCommand(c *context, args []string) (any, error) {
 	_, err := positionals(c, "skill", args, 0)
-	return api.SkillResult{Skill: skill.Text}, err
+	if err != nil {
+		return nil, err
+	}
+	origin, err := c.serverURL()
+	if err != nil {
+		if !errors.Is(err, errServerNotConfigured) {
+			return nil, err
+		}
+	}
+	return api.SkillResult{Skill: skill.Render(origin)}, nil
 }
