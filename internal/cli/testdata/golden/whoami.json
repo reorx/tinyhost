@@ -1,0 +1,9 @@
+{
+  "client": {
+    "created_at": "\u003ctime\u003e",
+    "expires_at": null,
+    "id": "\u003cid\u003e",
+    "name": "writer"
+  },
+  "server_version": "dev"
+}

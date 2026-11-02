@@ -1,0 +1,14 @@
+{
+  "app": "demo",
+  "app_created_by": "\u003cid\u003e",
+  "current_version": 2,
+  "data_dir": null,
+  "files": 3,
+  "kind": "app",
+  "main_url": "http://server.test/demo/",
+  "promoted": false,
+  "size": 29,
+  "skipped": [],
+  "version": 3,
+  "version_url": "http://server.test/demo@v3/"
+}

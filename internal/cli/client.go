@@ -1,0 +1,92 @@
+package cli
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/reorx/tinyhost/internal/api"
+)
+
+func (c *context) serverURL() (string, error) {
+	raw := c.server
+	if raw == "" {
+		raw = os.Getenv("TINYHOST_SERVER")
+	}
+	if raw == "" {
+		dir, err := os.UserConfigDir()
+		if err != nil {
+			return "", err
+		}
+		path := filepath.Join(dir, "tinyhost", "config.json")
+		data, err := os.ReadFile(path)
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			return "", fmt.Errorf("读取 %s：%w", path, err)
+		}
+		if err == nil {
+			var config struct {
+				Server string `json:"server"`
+			}
+			if err = json.Unmarshal(data, &config); err != nil {
+				return "", fmt.Errorf("解析 %s：%w", path, err)
+			}
+			raw = config.Server
+		}
+	}
+	if raw == "" {
+		return "", usage("请用 --server、TINYHOST_SERVER 或 config.json 设置服务器地址")
+	}
+	u, err := url.Parse(raw)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || u.User != nil || (u.Path != "" && u.Path != "/") || u.RawQuery != "" || u.Fragment != "" {
+		return "", usage("服务器地址必须为 http(s)://host[:port]，不带路径、凭证、查询或片段")
+	}
+	return strings.TrimRight(raw, "/"), nil
+}
+func (c *context) request(method, path string, query url.Values, body io.Reader, contentType string, result any) error {
+	key := os.Getenv("TINYHOST_TOKEN")
+	if key == "" {
+		return &commandError{detail: api.ErrorDetail{Code: "unauthorized", Message: "缺少 TINYHOST_TOKEN", Hint: "先用 tinyhost-server token create 签发 token，再设置 TINYHOST_TOKEN"}, exit: 3}
+	}
+	origin, err := c.serverURL()
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest(method, origin+"/_/api/v1"+path, body)
+	if err != nil {
+		return err
+	}
+	req.URL.RawQuery = query.Encode()
+	req.Header.Set("Authorization", "Bearer "+key)
+	req.Header.Set("Accept", "application/json")
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
+	client := &http.Client{Timeout: 2 * time.Minute, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	response, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		var failure api.Error
+		if err = json.NewDecoder(io.LimitReader(response.Body, 1<<20)).Decode(&failure); err != nil || failure.Error.Code == "" {
+			return fmt.Errorf("服务器返回 HTTP %d，响应不是 tinyhost JSON 错误", response.StatusCode)
+		}
+		exit := 1
+		if response.StatusCode == http.StatusUnauthorized {
+			exit = 3
+		}
+		return &commandError{detail: failure.Error, exit: exit}
+	}
+	if err = json.NewDecoder(response.Body).Decode(result); err != nil {
+		return fmt.Errorf("解析服务器响应：%w", err)
+	}
+	return nil
+}

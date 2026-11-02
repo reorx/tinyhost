@@ -1,0 +1,15 @@
+{
+  "apps": [
+    {
+      "created_at": "\u003ctime\u003e",
+      "created_by": "\u003cid\u003e",
+      "current_version": 2,
+      "id": "\u003cid\u003e",
+      "main_url": "http://server.test/demo/",
+      "slug": "demo",
+      "title": "报告",
+      "updated_at": "\u003ctime\u003e",
+      "visibility": "public"
+    }
+  ]
+}

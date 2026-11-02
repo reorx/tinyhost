@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "unauthorized",
+    "hint": "先用 tinyhost-server token create 签发 token，再设置 TINYHOST_TOKEN",
+    "message": "缺少 TINYHOST_TOKEN"
+  }
+}

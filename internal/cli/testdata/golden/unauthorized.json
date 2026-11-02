@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "unauthorized",
+    "hint": "请重新获取 token",
+    "message": "token 无效、已撤销或已过期"
+  }
+}

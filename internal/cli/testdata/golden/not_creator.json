@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "not_creator",
+    "hint": "联系创建者或 Owner",
+    "message": "只能删除自己创建的 App，创建者：\u003cid\u003e"
+  }
+}

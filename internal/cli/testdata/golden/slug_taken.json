@@ -1,0 +1,10 @@
+{
+  "error": {
+    "code": "slug_taken",
+    "created_at": "\u003ctime\u003e",
+    "created_by": "\u003cid\u003e",
+    "deleted": false,
+    "hint": "更换名字，或去掉 --create 发布新版本",
+    "message": "slug 已被占用，创建者：\u003cid\u003e"
+  }
+}

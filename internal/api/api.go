@@ -89,3 +89,14 @@ type DeployResult struct {
 	AppCreatedBy   string   `json:"app_created_by"`
 	Skipped        []string `json:"skipped"`
 }
+
+// VersionResult, HelpResult and SkillResult are local CLI output contracts.
+type VersionResult struct {
+	Version string `json:"version"`
+}
+type HelpResult struct {
+	Help string `json:"help"`
+}
+type SkillResult struct {
+	Skill string `json:"skill"`
+}

@@ -1,0 +1,10 @@
+{
+  "error": {
+    "code": "overlay_conflict",
+    "existing_dirs": [
+      "data/"
+    ],
+    "hint": "覆盖目录不能互相嵌套",
+    "message": "overlay conflict: data/"
+  }
+}

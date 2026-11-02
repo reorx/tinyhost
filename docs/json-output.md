@@ -117,4 +117,37 @@ DTO `Error` 包含 `ErrorDetail`：
 
 ## CLI --json
 
-由 th-m1-cli 任务补充。HTTP DTO 已冻结，CLI 应直接使用这些结构。
+所有 M1 命令都接受 `--json`，可放在命令前后。成功和失败都向 stdout 输出一个缩进两空格的 JSON 文档并换行；stderr 只用于非致命警告或 stdout 写入失败。未加 `--json` 时，成功信息写 stdout，错误以 `错误：`、`提示：` 写 stderr。
+
+CLI 直接序列化下表的 `internal/api` DTO，不包装额外的 success、result 字段，不输出 store 模型。远端命令的字段和含义与上面的 HTTP 响应完全一致。
+
+| 命令 | 成功 DTO |
+|---|---|
+| `deploy [路径]` | `DeployResult` |
+| `data push <路径> --app SLUG --to 目录/` | `DeployResult` |
+| `data rm --app SLUG --to 目录/` | `DeployResult`，files/size 为 0 |
+| `apps` | `AppsResult` |
+| `info <slug>` | `AppDetail` |
+| `versions <slug>` | `VersionsResult` |
+| `promote <slug> <vN>` | `PromoteResult` |
+| `delete <slug>` | `DeleteResult` |
+| `whoami` | `WhoamiResult`；文本模式另显示所连接的服务器地址 |
+| `version` | `VersionResult`：`{"version":"dev"}`，值由构建注入 |
+| `help`、无命令、`--help` | `HelpResult`：`{"help":"AGENTS: run ...\n..."}` |
+| `skill` | `SkillResult`：`{"skill":"..."}`；M1 为占位说明，M3 补全正文 |
+
+本地错误也使用 `Error` DTO。远端业务错误保留服务端的 code/message/hint 和可选上下文字段。CLI 本地 code：`usage`（参数或配置地址用法错误）、`unauthorized`（缺少 token）、`slug_invalid`（本地 slug 校验失败）、`cli_error`（打包、配置读取、网络、响应解析等一般错误）。hint 可以为空字符串。
+
+| 退出码 | 含义 |
+|---|---|
+| 0 | 成功；包括帮助和 skill 占位说明 |
+| 1 | 一般错误，含发布/查询业务失败、打包失败、网络错误和输出失败 |
+| 2 | 用法错误：未知命令/参数、位置参数数量错误、缺少 --app、非法 vN 或服务器地址 |
+| 3 | 未授权：缺少 TINYHOST_TOKEN，或服务端 HTTP 401（无效/撤销/过期 token） |
+| 4 | 授权等待中，M2 保留，M1 不产生 |
+
+服务器读取顺序为 `--server` > `TINYHOST_SERVER` > `os.UserConfigDir()/tinyhost/config.json` 的 server 字段。macOS 为 `~/Library/Application Support/tinyhost/config.json`；Linux 为 `$XDG_CONFIG_HOME/tinyhost/config.json` 或 `~/.config/tinyhost/config.json`。M1 token 只读 `TINYHOST_TOKEN`，凭证文件在 M2 接入。服务器地址只接受 http(s) origin，可带末尾 `/`，不能带路径、URL 凭证、query 或 fragment。
+
+`deploy --create` 成功后才写回本地 tinyhost.json；写回失败时发布已经生效，因此仍输出成功 DTO、退出 0，并在 stderr 提示显式传 --app，避免重试生成重复版本。符号链接的打包跳过警告也只进 stderr。stdout 写入失败退出 1，管道读端可能已无法接收错误 JSON。
+
+golden 快照位于 `internal/cli/testdata/golden/`，覆盖所有命令和代表性错误；仅屏蔽随机 ID、时间和本地测试服务器端口，保留字段、null、数组、版本和统计值。更新：`mise exec -- go test ./internal/cli -update`。

@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "app_not_found",
+    "hint": "新建请加 --create",
+    "message": "App 不存在或已删除"
+  }
+}
