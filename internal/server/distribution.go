@@ -12,6 +12,9 @@ import (
 
 type RootView struct{ AppsURL, Version, InstallCommand string }
 
+// trustedAppsPageCSP applies to server-generated pages on the apps origin.
+const trustedAppsPageCSP = "default-src 'self'; frame-ancestors 'none'; form-action 'none'"
+
 func (s *Server) distribution(w http.ResponseWriter, r *http.Request, downloads *distribution.Proxy) bool {
 	if strings.HasPrefix(r.URL.Path, "/_/static/") {
 		if r.Method != "GET" && r.Method != "HEAD" {
@@ -38,7 +41,7 @@ func (s *Server) distribution(w http.ResponseWriter, r *http.Request, downloads 
 	w.Header().Set("Cache-Control", "no-cache")
 	switch r.URL.Path {
 	case "/":
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; frame-ancestors 'none'; form-action 'none'")
+		w.Header().Set("Content-Security-Policy", trustedAppsPageCSP)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if r.Method != "HEAD" {
 			s.render(w, "root.html", RootView{AppsURL: strings.TrimRight(s.Config.AppsURL, "/"), Version: version.Version, InstallCommand: "curl -fsSL " + strings.TrimRight(s.Config.AppsURL, "/") + "/install.sh | sh"})

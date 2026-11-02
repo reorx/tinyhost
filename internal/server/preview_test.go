@@ -176,3 +176,38 @@ func TestExpiredPreviewCanBeDeletedByLinkToken(t *testing.T) {
 	}
 	f.want("GET", previewPath(p), "", nil, 404)
 }
+
+// Behavior: expired preview GET and HEAD responses use the root page's trusted CSP, while active and missing previews retain their content policy.
+func TestExpiredPreviewUsesTrustedPageCSP(t *testing.T) {
+	f := setup(t)
+	p := f.preview(f.key, "key=csp&ttl=1h", "active content")
+	const want = "default-src 'self'; frame-ancestors 'none'; form-action 'none'"
+	status, _, rootHeaders := f.request("GET", "/", "", nil)
+	if status != http.StatusOK || rootHeaders.Get("Content-Security-Policy") != want {
+		t.Fatalf("root: status=%d CSP=%q", status, rootHeaders.Get("Content-Security-Policy"))
+	}
+	for _, tc := range []struct {
+		path   string
+		status int
+	}{
+		{previewPath(p), http.StatusOK},
+		{"/_p/aaaaaaaaaaaaaaaaaaaa/", http.StatusNotFound},
+	} {
+		status, _, headers := f.request("GET", tc.path, "", nil)
+		if status != tc.status || headers.Get("Content-Security-Policy") != "" {
+			t.Fatalf("%s: status=%d CSP=%q", tc.path, status, headers.Get("Content-Security-Policy"))
+		}
+	}
+	f.now = time.Unix(p.ExpiresAt, 0)
+	for _, method := range []string{"GET", "HEAD"} {
+		t.Run(method, func(t *testing.T) {
+			status, body, headers := f.request(method, previewPath(p), "", nil)
+			if status != http.StatusGone || headers.Get("Content-Security-Policy") != want {
+				t.Fatalf("status=%d CSP=%q, want %q", status, headers.Get("Content-Security-Policy"), want)
+			}
+			if method == "HEAD" && len(body) != 0 {
+				t.Fatalf("HEAD returned body: %q", body)
+			}
+		})
+	}
+}

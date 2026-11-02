@@ -104,6 +104,7 @@ func (s *Server) previewContent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if p.ExpiresAt <= s.now().Unix() {
+		w.Header().Set("Content-Security-Policy", trustedAppsPageCSP)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusGone)
 		if r.Method != "HEAD" {

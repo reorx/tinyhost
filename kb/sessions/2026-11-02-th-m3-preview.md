@@ -100,3 +100,13 @@ M3 的明文 capability 使数据库权限要求变得明确：`Store.Open` 在 
 - bundle：`bundle.go`、`pack.go`；新增 `check.go`、`check_test.go`。
 - cli：`commands.go`、`output.go`；新增 `previews.go`、`preview_test.go`、七份 golden，更新 help golden。
 - 契约与总结：`internal/api/api.go`、`docs/json-output.md`、本文。
+
+## 返工 r1：过期页 CSP
+
+为 apps 域名服务端生成的预览过期页补上 CSP：`default-src 'self'; frame-ancestors 'none'; form-action 'none'`。`internal/server/distribution.go` 定义 `trustedAppsPageCSP`，根路径页和 `previewContent` 的 410 分支共同引用它，且在写出状态码前设置响应头。正常预览内容和 404 分支未改。
+
+先新增 `TestExpiredPreviewUsesTrustedPageCSP`：断言根路径页的准确策略，GET/HEAD 过期预览返回同样的 CSP，HEAD 无 body；同时断言正常预览和不存在预览仍不带 CSP。实现前运行 `mise exec -- go test ./internal/server -run '^TestExpiredPreviewUsesTrustedPageCSP$' -count=1`，GET、HEAD 两项均因 410 的 CSP 为空失败；实现后同命令加 `-v`，一个顶层测试及两个子测试全部通过。
+
+证据保存在 `tmp/tinyhost-v1/work/th-m3-preview/`：`r1-red.log`、`r1-green.log`、`r1-test.log`、`r1-tests.jsonl`、`r1-test-count.txt`、`r1-vet.log`、`r1-gofmt.log`。`mise exec -- make test` 全绿，共 139 个顶层测试、75 个子测试，合计 214 项；`mise exec -- go vet ./...`、`mise exec -- gofmt -l internal cmd` 输出为空，`git diff --check` 通过。本次未修改页面模板，没有启动浏览器或本地服务。
+
+代码、测试和本节在同一提交。协调者在工作区中的 `AGENTS.md` 和 M3 spec 改动未修改、未暂存；本次提交仅含 `distribution.go`、`previews.go`、`preview_test.go` 与本文。
