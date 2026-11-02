@@ -244,7 +244,7 @@ CREATE TABLE previews (
 - [x] CLI：`preview`、`previews`、`skill`、版本提示，golden 快照
 - [x] 根路径说明页
 - [x] 更新 `docs/json-output.md`、`AGENTS.md`
-- [ ] 手动验收：在一个 Linux 容器里跑安装脚本（容器跑在服务器或 CI 上，不在本机跑 docker），`--dl-dir` 指向 `make dist` 的产物，截图存到 `tmp/<日期>-m3-preview-distribution/`
+- [ ] 手动验收：在一个 Linux 容器里跑安装脚本（容器跑在服务器或 CI 上，不在本机跑 docker），`--dl-dir` 指向 `make dist` 的产物，截图存到 `tmp/<日期>-m3-preview-distribution/`（2026-11-02 用户决定：并入 M4 验收 2，对线上服务器在 amd64/arm64 上验收；macOS 部分已由 th-m3-dist 在本机临时 HOME 跑通）
 
 ### 测试与验证
 

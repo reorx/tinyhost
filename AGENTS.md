@@ -1,11 +1,12 @@
 # tinyhost
 
-给 Agent 用的自托管静态网站发布服务。Agent 用 CLI 把一个目录发布成 App（`th.reorx.com/<slug>/`），每次发布生成一个不可变版本。Agent 通过设备授权自助接入，Owner 在后台（`th-admin.reorx.com`）批准。Go 编写，无 CGO，存储是 SQLite 加内容寻址的文件块。开发方法论是 BDD：先写行为测试，再实现。
+给 Agent 用的自托管静态网站发布服务。Agent 用 CLI 把一个目录发布成 App（`tinyhost.space/<slug>/`），每次发布生成一个不可变版本。Agent 通过设备授权自助接入，Owner 在后台（`th.reorx.com`）批准。apps 用独立的注册域名，是为了不和 reorx.com 下其他用 cookie 的服务同站（spec 原来写的是 `th.reorx.com` / `th-admin.reorx.com`）。Go 编写，无 CGO，存储是 SQLite 加内容寻址的文件块。开发方法论是 BDD：先写行为测试，再实现。
 
 ## 现状
 
-- 2026-11-02：M1 核心发布、M2 授权与后台已完成，都经过本地真实浏览器验收（截图在 `tmp/2026-11-02-m1-core-publish/`、`tmp/2026-11-02-m2-*`）。M3 预览与分发进行中：预览与路径检查（`d164377`）、skill、安装、下载代理、通知（`a7f3683`）、界面（`9be8385`，截图在 `tmp/2026-11-02-m3-ui/`）已完成；Linux 容器的安装验收（验收 6）还没跑。总 plan 和四期 spec 在 `kb/plans/2026-11-02-tinyhost*.md`。
-- 生产部署在 deploy 目录管理（见用户全局 CLAUDE.md 的 DevOps 约定），M4 才上线。
+- 2026-11-02：M1 核心发布、M2 授权与后台、M3 预览与分发已完成，都经过本地真实浏览器验收（截图在 `tmp/2026-11-02-m1-core-publish/`、`tmp/2026-11-02-m2-*`、`tmp/2026-11-02-m3-ui/`）。M3 的 Linux 容器安装验收并入 M4 验收 2。总 plan 和四期 spec 在 `kb/plans/2026-11-02-tinyhost*.md`。
+- M4 上线进行中：发版流水线已完成（`167a9d1`），仓库已公开在 `github.com/reorx/tinyhost`（MIT），`v0.1.0-rc.1` 已发布 Release 和 ghcr 镜像，并已部署到线上（apps `https://tinyhost.space`，后台 `https://th.reorx.com`）。生产部署配置和运维 SOP 在独立的 deploy 仓库（见用户全局 CLAUDE.md 的 DevOps 约定）的 `kb/docs/tinyhost.md`，本仓库不存生产服务器细节、凭据和部署总结。验收发布时要核对线上服务的版本头和 CLI 版本一致。
+- **仓库是公开的**：提交、`kb/`、总结里不写密值、token、IP、OSS bucket 名，也不写 reorx.com 上其他服务的安全弱点。运维细节写进 deploy 仓库。
 
 ## 关键约束
 
@@ -37,7 +38,7 @@
 - `internal/store`：内嵌 `schema.sql`，用 `user_version` 迁移。`CommitAppVersion` / `CommitDataVersion` 在一个事务里写层、版本、主入口；参数里的 app 用 ID；数据层的路径要预先加上规范化的覆盖目录前缀。`LookupVersionFile` 在覆盖层里找不到文件时不回落到 App 包层；补 `.html`、404 等 HTTP 策略由 server 负责。
   - M2（`user_version=2`）新增授权申请、会话、查看票据、settings、`slug_redirects`。`PollDevice` 在一个事务里创建并消费 client。`SlugOwner` 同时查现名和历史跳转；`CreateApp` 上的插入触发器阻止复用旧 slug。
   - M3（`user_version=3`）新增 `previews`，在 `previews.go`：按 (client, local_key) 唯一，`CommitPreview` 原子替换层和到期时间。GC 先把过期预览的 layer 置 NULL，七天后删除整行；孤儿层的两处判断（`OrphanLayers` / `DeleteOrphanLayer`）都要把 `previews.layer` 算作引用。`Store.Open` 会把新建和已有的数据库设为 0600。
-- `internal/distribution`：`/_/dl/` 下载代理，只提供当前版本 `checksums.txt` 里列出的单段文件名；从远端下载、命中缓存、读本地 `--dl-dir` 时都校验 SHA-256，临时文件校验通过后才 rename。远端缓存在 `<data-dir>/dl/<version>/`。`scripts/dist.sh`（`make dist`）生成六个平台的 CLI 包和 checksums；`scripts/accept-install.sh` 在全新的 HOME 里验证安装、skill 和 login（验收 6）。
+- `internal/distribution`：`/_/dl/` 下载代理，只提供当前版本 `checksums.txt` 里列出的单段文件名；从远端下载、命中缓存、读本地 `--dl-dir` 时都校验 SHA-256，临时文件校验通过后才 rename。远端缓存在 `<data-dir>/dl/<version>/`。`scripts/dist.sh`（`make dist VERSION=…`）生成六个平台的 CLI 包（Windows 是 zip，其余 tar.gz）、linux amd64/arm64 与 darwin arm64 的服务端包和统一的 checksums；文件名里的版本不带 `v`，macOS 上打包用 `COPYFILE_DISABLE=1` 避免 AppleDouble 混进包里。`scripts/accept-install.sh` 在全新的 HOME 里验证安装、skill 和 login（验收 6）。
 - `internal/notify`：容量 100 的异步队列，默认事件 `device.requested` / `app.created` / `app.deployed`；ntfy 和 webhook 每个请求 10 秒超时、不重试，队列满或发送失败只记日志。事件消息的组装和回调接线在 `cmd/tinyhost-server/notify.go`。`device.requested` 的 detail 里不能放 device_code（它是秘密）。
 - `internal/api`：HTTP API 和 CLI `--json` 共用的 DTO，接口契约见 `docs/json-output.md`。CLI 直接输出这些 DTO，不输出 store 的模型。
 - `internal/server`：按 Host 分流、只认 Bearer 的 Agent API、内容解析、GC。`Server.Now` 可注入时钟；`OnEvent` 在审计记录落库后通知上层。上传和 GC 之间有一把生命周期锁，保护「blob 写完到 SQL 提交」这段窗口，上传之间仍然并发。
@@ -51,6 +52,8 @@
 - `skill/`：`SKILL.md` 和 `install.sh` 都 embed 进来。`Render(server)` 填入服务器地址和构建版本，`/skill.md` 和 `tinyhost skill` 共用它，所以服务器和 CLI 要用同一个 VERSION 构建。`RenderInstall` 对 shell 和 JSON 做安全引用。安装脚本写 `config.json`（0600）的目录必须和 Go 的 `os.UserConfigDir` 一致：macOS 是 `~/Library/Application Support/tinyhost`，Linux 遵守 `XDG_CONFIG_HOME`。
 - `cmd/tinyhost`：只调 CLI 的 Run 并返回退出码，不引入服务端和 SQLite 的依赖。
 - `cmd/tinyhost-server`：`serve` / `passwd` / `token create` / `gc` / `version`。`serve` 必须给出和 apps 不同 Host 的 `--admin-url`；`--insecure-cookies` 只用于本地。数据库在 `<data-dir>/tinyhost.db`；相对的数据目录在入口处先转成绝对路径再传给 `store.Open`。
+- `.github/workflows/`：CI 在 push 和 PR 时跑 gofmt 检查、测试和 vet，Go 版本和 mise 一样锁在 1.27.3。`v*` tag 触发 Release 和 ghcr 的双架构镜像；版本号带连字符的是 prerelease，镜像不推 `latest`。已推的 tag 不移动、不删除，修好后递增 rc 号。
+- `Dockerfile`：直接用同版本 `make dist` 产出的服务端包，不重新编译；基于 distroless/static，只含服务端，数据在 `/data`，默认监听 `:3471`。本机不跑 Docker，镜像的构建和双架构验证都在 CI 里。
 
 ## 文档
 
