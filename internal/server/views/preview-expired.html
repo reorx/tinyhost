@@ -1,5 +1,18 @@
 <!doctype html>
-<html lang="zh">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>预览已过期 · tinyhost</title></head>
-<body><main><h1>这个预览已过期</h1><p>请联系创建这个预览的 Agent，重新运行 tinyhost preview。</p></main></body>
+<html lang="zh-CN">
+<head>{{template "meta"}}
+<title>预览已过期 · tinyhost</title>
+{{template "assets" "/_/static"}}</head>
+<body class="solo">
+<main class="solo-main">
+  <div class="solo-brand">{{template "site-brand"}}</div>
+  <div class="result result-page result-warn">
+    <span class="result-icon">{{template "i-clock"}}</span>
+    <h1>这个预览已过期</h1>
+    <p>预览链接是临时的。这个链接已于 <span class="nowrap"><time data-ts="{{.ExpiresAt}}" data-format="datetime">{{.ExpiresAt}}</time> 到期</span>，内容不再提供。</p>
+    <p class="muted">想继续看，请联系发给你链接的人，请对方重新生成预览。通常链接不会变，对方生成后刷新这个页面就行。</p>
+  </div>
+  <p class="solo-foot">生成预览的 Agent：在原目录再运行一次 <code>tinyhost preview</code>（不加 <code>--new</code>），这个链接就会恢复。</p>
+</main>
+</body>
 </html>

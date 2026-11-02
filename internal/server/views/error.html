@@ -1,3 +1,23 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{.Status}} · tinyhost</title></head>
-<body><main data-error-page><h1>{{.Status}} {{.Title}}</h1><p>{{.Description}}</p><p><a href="{{.BackURL}}">返回后台首页</a></p></main></body></html>
+<html lang="zh-CN">
+<head>{{template "meta"}}
+<title>{{.Status}} {{template "error-kind" .}} · tinyhost</title>
+{{template "assets" "/static"}}</head>
+<body class="solo">
+<main class="solo-main" data-error-page>
+  <div class="solo-brand">{{template "brand"}}</div>
+  <div class="result result-page{{if eq .Status 404}}{{else if ge .Status 500}} result-danger{{else}} result-warn{{end}}">
+    <span class="result-icon">{{if eq .Status 401}}{{template "i-lock"}}{{else if eq .Status 403}}{{template "i-shield"}}{{else if eq .Status 404}}{{template "i-search"}}{{else if eq .Status 429}}{{template "i-clock"}}{{else}}{{template "i-alert"}}{{end}}</span>
+    <p class="result-code"><span class="mono">{{.Status}}</span>{{template "error-kind" .}}</p>
+    <h1>{{.Description}}</h1>
+    <p class="muted">{{if eq .Status 400}}提交的内容不符合要求。返回上一页修改后再提交。{{else if eq .Status 401}}还没有登录，或者登录已失效。登录后把刚才的操作再做一次。{{else if eq .Status 403}}这个请求不是从后台页面发出的，已被拦截。如果你确实是在后台里操作，刷新页面后重试。{{else if eq .Status 404}}链接可能有误，或者它指向的内容已被删除。{{else if eq .Status 409}}和现有数据冲突，或者状态在你打开页面之后已经变了。刷新页面看看最新状态。{{else if eq .Status 429}}为了防止密码被猜测，登录尝试有次数限制。等一分钟再试。{{else if ge .Status 500}}问题已记入服务端日志。稍后重试；一直出现时查看服务端日志。{{end}}</p>
+    <div class="result-actions">
+      <a class="btn btn-primary btn-lg" href="{{.BackURL}}">{{if eq .Status 401}}去登录{{else}}返回后台首页{{end}}</a>
+      <button type="button" class="btn btn-lg" data-back hidden>{{template "i-arrow-left"}}返回上一页</button>
+    </div>
+  </div>
+</main>
+</body>
+</html>
+
+{{define "error-kind"}}{{if eq .Status 400}}请求有误{{else if eq .Status 401}}需要登录{{else if eq .Status 403}}请求被拦截{{else if eq .Status 404}}找不到{{else if eq .Status 409}}状态冲突{{else if eq .Status 429}}尝试太频繁{{else if eq .Status 500}}服务器出错{{else}}{{.Title}}{{end}}{{end}}

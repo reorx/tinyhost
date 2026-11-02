@@ -56,6 +56,16 @@ if (navigator.clipboard) {
   });
 }
 
+// "Back" buttons on error pages appear only when there is a page to go back to.
+if (window.history.length > 1) {
+  document.querySelectorAll('[data-back]').forEach(function (button) {
+    button.hidden = false;
+    button.addEventListener('click', function () {
+      window.history.back();
+    });
+  });
+}
+
 // The account menu closes on outside click and Escape.
 document.addEventListener('click', function (event) {
   document.querySelectorAll('details.menu[open]').forEach(function (menu) {

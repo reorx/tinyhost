@@ -6,17 +6,30 @@
 <main class="page">
   <div class="page-head">
     <h1>预览<span class="count">{{len .Previews}}</span></h1>
-    <p class="subtitle">所有 Agent 的临时预览。拿到链接即可查看，到期自动失效。</p>
+    <p class="subtitle">拿到链接的人不用登录就能打开。到期后显示「已过期」，再过 7 天彻底删除。</p>
   </div>
-  <div class="tbl"><table>
-    <thead><tr><th>来源与链接</th><th>Agent</th><th>到期时间</th><th>状态</th><th>操作</th></tr></thead>
-    <tbody>{{range .Previews}}<tr>
-      <td class="primary"><a class="mono" href="{{.URL}}">{{if .Source}}{{.Source}}{{else}}{{.ID}}{{end}}</a><br><code>{{.ID}}</code></td>
+  <div class="tbl tbl-previews"><table>
+    <thead><tr><th>来源与链接</th><th>Agent</th><th>最近更新</th><th>状态</th><th><span class="sr-only">操作</span></th></tr></thead>
+    <tbody>{{range .Previews}}<tr{{if .Expired}} class="is-expired"{{end}}>
+      <td class="primary">
+        <div class="preview">
+          {{if .Source}}<span class="mono preview-src">{{.Source}}</span>{{else}}<span class="preview-src muted">未记录来源目录</span>{{end}}
+          <a class="mono preview-url" href="{{.URL}}" target="_blank" rel="noopener noreferrer">{{.URL}}</a>
+          <span class="mono preview-id" title="tinyhost previews rm 可用的 ID">{{.ID}}</span>
+        </div>
+      </td>
       <td data-label="Agent">{{.CreatorName}}</td>
-      <td data-label="到期"><time data-ts="{{.ExpiresAt}}" data-format="datetime">{{.ExpiresAt}}</time></td>
-      <td>{{if .Expired}}已过期{{else}}有效{{end}}</td>
-      <td class="full row-actions"><form action="/previews/{{.ID}}/delete" method="post" data-confirm="删除此预览？链接将立即失效。"><button class="btn btn-sm btn-danger">删除</button></form></td>
-    </tr>{{else}}<tr><td class="empty" colspan="5">暂无预览</td></tr>{{end}}</tbody>
+      <td class="nowrap" data-label="更新于"><time data-ts="{{.UpdatedAt}}">{{.UpdatedAt}}</time></td>
+      <td class="nowrap">{{if .Expired}}<span class="badge badge-muted">已过期</span> <span class="muted"><time data-ts="{{.ExpiresAt}}">{{.ExpiresAt}}</time></span>{{else}}<span class="badge badge-ok">有效</span> <span class="muted"><time data-ts="{{.ExpiresAt}}">{{.ExpiresAt}}</time>到期</span>{{end}}</td>
+      <td class="full row-actions">
+        {{if not .Expired}}<a class="btn btn-sm" href="{{.URL}}" target="_blank" rel="noopener noreferrer">打开{{template "i-external"}}</a>
+        <button type="button" class="btn btn-sm" data-copy="{{.URL}}" hidden>复制链接</button>{{end}}
+        <form action="/previews/{{.ID}}/delete" method="post" data-confirm="删除这个预览？{{if .Expired}}它已过期，删除后链接直接变成 404。{{else}}链接会立即失效，打开的人会看到 404。{{end}}"><button class="btn btn-sm btn-danger">删除</button></form>
+      </td>
+    </tr>{{else}}<tr><td class="empty" colspan="5">
+      <p>还没有预览。</p>
+      <p class="muted">Agent 运行 <code>tinyhost preview &lt;目录&gt;</code> 会得到一个临时链接，它会出现在这里。</p>
+    </td></tr>{{end}}</tbody>
   </table></div>
 </main>
 </body>

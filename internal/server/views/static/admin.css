@@ -90,6 +90,8 @@ code {
 
 time, .nowrap, .count, .ver { font-variant-numeric: tabular-nums; }
 .muted { color: var(--text-3); }
+/* .btn and friends set display, which would otherwise beat the UA rule for [hidden] */
+[hidden] { display: none !important; }
 .nowrap { white-space: nowrap; }
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
@@ -460,6 +462,86 @@ body.solo { background: var(--bg); }
 .code-form { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--line); }
 .code-form .input { letter-spacing: 0.08em; text-transform: uppercase; }
 
+/* error page and expired preview: the status line sits between the icon and the headline */
+.result-danger .result-icon { background: var(--danger-soft); color: var(--danger); }
+.result-page p { text-wrap: pretty; }
+.result-code {
+  display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 16px;
+  font-size: 0.8125rem; font-weight: 550;
+}
+.result .result-code { color: var(--text-2); }
+.result-code .mono {
+  padding: 0 6px; border: 1px solid var(--line-strong); border-radius: 5px;
+  font-size: 0.75rem; font-weight: 600; line-height: 1.6; color: var(--text);
+}
+.result-code + h1 { margin-top: 8px; overflow-wrap: anywhere; }
+.result-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 28px; }
+.solo-foot code { font-size: 0.8125rem; white-space: nowrap; }
+
+/* ---------- previews ---------- */
+
+.preview { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.preview-src { font-size: 0.875rem; font-weight: 600; color: var(--text); overflow-wrap: anywhere; }
+.preview-url { font-size: 0.8125rem; overflow-wrap: anywhere; }
+.preview-id { font-size: 0.75rem; color: var(--text-3); overflow-wrap: anywhere; }
+.preview-src.muted { font-weight: 500; color: var(--text-3); }
+.tbl tr.is-expired .preview-src, .tbl tr.is-expired .preview-url { color: var(--text-3); }
+
+/* ---------- apps origin: service root ---------- */
+
+body.site { background: var(--bg); }
+.site-main { max-width: 680px; margin: 0 auto; padding: 32px 24px 56px; }
+.site-head { margin-bottom: 64px; }
+.hero h1 { font-size: 2rem; font-weight: 680; letter-spacing: -0.02em; }
+.hero .lead { margin: 14px 0 0; max-width: 58ch; font-size: 1.0625rem; color: var(--text-2); }
+.site-label {
+  margin: 56px 0 20px; font-size: 0.8125rem; font-weight: 600; color: var(--text-3);
+}
+
+.steps { list-style: none; margin: 0; padding: 0; counter-reset: step; }
+.steps > li { position: relative; padding: 0 0 32px 44px; counter-increment: step; }
+.steps > li:last-child { padding-bottom: 0; }
+.steps > li::before {
+  content: counter(step);
+  position: absolute; left: 0; top: 0; width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface); border: 1px solid var(--line-strong); border-radius: 50%;
+  font: 600 0.8125rem/1 var(--mono); color: var(--text-2);
+}
+.steps > li::after {
+  content: ""; position: absolute; left: 14px; top: 36px; bottom: 8px;
+  width: 1px; background: var(--line-strong);
+}
+.steps > li:last-child::after { display: none; }
+.steps h3 { font-size: 1rem; line-height: 28px; margin-bottom: 10px; }
+.steps .hint { margin-top: 10px; font-size: 0.875rem; }
+.step-text { color: var(--text-2); }
+
+/* a shell command with its copy button; "$ " is drawn by CSS so copying the text never picks it up */
+.cmd {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 10px 10px 16px; background: var(--surface);
+  border: 1px solid var(--line-strong); border-radius: var(--radius);
+}
+.cmd code {
+  flex: 1; min-width: 0; padding: 4px 0; background: none;
+  font-size: 0.875rem; line-height: 1.55; color: var(--text); overflow-wrap: anywhere;
+}
+.cmd code::before { content: "$ "; color: var(--text-3); user-select: none; }
+.cmd .btn { flex: none; }
+.cmd-main { border-color: color-mix(in srgb, var(--accent) 55%, var(--line-strong)); box-shadow: 0 0 0 3px var(--accent-soft); }
+.cmd-main code { font-size: 0.9375rem; }
+
+.callout-note { margin-top: 56px; background: var(--surface); border-color: var(--line); }
+.callout-note > .icon { color: var(--accent-text); }
+
+.site-foot {
+  display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px;
+  margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line);
+  font-size: 0.8125rem; color: var(--text-3);
+}
+.site-foot .mono { overflow-wrap: anywhere; }
+
 /* ---------- responsive ---------- */
 
 @media (max-width: 960px) {
@@ -517,6 +599,20 @@ body.solo { background: var(--bg); }
 
   .pending { padding: 14px 14px 6px; }
   .pending-go { margin-left: 0; }
+
+  .site-main { padding: 20px 16px 48px; }
+  .site-head { margin-bottom: 40px; }
+  .hero h1 { font-size: 1.625rem; }
+  .hero .lead { font-size: 1rem; }
+  .site-label { margin-top: 44px; }
+  /* steps lose their indent so the command line gets the full width; the number sits beside the heading */
+  .steps > li { padding-left: 0; }
+  .steps > li::after { display: none; }
+  .steps h3 { padding-left: 40px; margin-bottom: 12px; }
+  .cmd { padding-left: 12px; gap: 8px; }
+  .cmd code, .cmd-main code { font-size: 0.8125rem; }
+  .preview-id { display: none; }
+  .callout-note { margin-top: 44px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

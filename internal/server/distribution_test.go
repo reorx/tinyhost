@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/reorx/tinyhost/internal/cli"
 	"github.com/reorx/tinyhost/internal/version"
@@ -116,5 +117,26 @@ func TestAppsSystemAssetsAreServedFromReservedPrefix(t *testing.T) {
 	_, _, h = f.request("GET", "/", "", nil)
 	if !strings.Contains(h.Get("Content-Security-Policy"), "default-src 'self'") {
 		t.Fatal(h)
+	}
+}
+
+// Behavior: apps-origin system pages never show a form or password field and load trusted assets from /_/static/ at any preview depth.
+func TestAppsSystemPagesHaveNoPasswordFieldAndUseReservedAssets(t *testing.T) {
+	f := setup(t)
+	p := f.preview(f.key, "key=site&ttl=1h", "one")
+	root := f.want("GET", "/", "", nil, 200)
+	f.now = time.Unix(p.ExpiresAt, 0)
+	expired := f.want("GET", previewPath(p)+"deep/nested/page.html", "", nil, 410)
+	for name, body := range map[string]string{"root": string(root), "expired": string(expired)} {
+		for _, bad := range []string{"<form", "<input", "password", `"/static/`, "<style", "style="} {
+			if strings.Contains(body, bad) {
+				t.Fatalf("%s contains %q: %s", name, bad, body)
+			}
+		}
+		for _, asset := range []string{`href="/_/static/admin.css"`, `src="/_/static/admin.js"`} {
+			if !strings.Contains(body, asset) {
+				t.Fatalf("%s missing %q: %s", name, asset, body)
+			}
+		}
 	}
 }

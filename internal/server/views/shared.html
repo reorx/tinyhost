@@ -1,14 +1,22 @@
-{{define "head"}}<meta charset="utf-8">
+{{define "meta"}}<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="color-scheme" content="light dark">
+<meta name="color-scheme" content="light dark">{{end}}
+
+{{/* The argument is the static prefix: "/static" on admin, "/_/static" on apps (absolute, so any /_p/ depth works). */}}
+{{define "assets"}}<link rel="icon" href="{{.}}/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="{{.}}/admin.css">
+<script src="{{.}}/admin.js" defer></script>{{end}}
+
+{{define "head"}}{{template "meta"}}
 <title>{{.}} · tinyhost</title>
-<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/static/admin.css">
-<script src="/static/admin.js" defer></script>{{end}}
+{{template "assets" "/static"}}{{end}}
 
 {{define "mark"}}<svg class="mark" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="6.5" y="11.5" width="6" height="6" rx="1.5" class="mark-dot"/></svg>{{end}}
 
 {{define "brand"}}<a class="brand" href="/">{{template "mark"}}<span>tinyhost</span><span class="brand-tag">后台</span></a>{{end}}
+
+{{/* apps-origin pages: no admin tag, "/" there is the service root. */}}
+{{define "site-brand"}}<a class="brand" href="/">{{template "mark"}}<span>tinyhost</span></a>{{end}}
 
 {{define "nav"}}<header class="topbar">
   <div class="topbar-inner">
@@ -34,7 +42,7 @@
 
 {{define "visibility"}}{{if eq . "public"}}<span class="badge badge-public">{{template "i-globe"}}公开</span>{{else}}<span class="badge badge-private">{{template "i-lock"}}私有</span>{{end}}{{end}}
 
-{{define "action"}}{{if eq . "app.created"}}新建 App{{else if eq . "app.deployed"}}发布 App 包{{else if eq . "data.pushed"}}推送数据{{else if eq . "data.removed"}}撤掉覆盖目录{{else if eq . "app.promoted"}}切换主入口{{else if eq . "app.visibility_changed"}}修改可见性{{else if eq . "app.renamed"}}修改 slug{{else if eq . "app.version_deleted"}}删除版本{{else if eq . "app.deleted"}}删除 App{{else if eq . "app.restored"}}从回收站恢复{{else if eq . "app.purged"}}立即清理{{else if eq . "agent.approved"}}批准授权{{else if eq . "agent.denied"}}拒绝授权{{else if eq . "agent.issued"}}手动签发 token{{else if eq . "agent.revoked"}}撤销 Agent{{else if eq . "owner.logged_out"}}退出登录{{else}}{{.}}{{end}}{{end}}
+{{define "action"}}{{if eq . "app.created"}}新建 App{{else if eq . "app.deployed"}}发布 App 包{{else if eq . "data.pushed"}}推送数据{{else if eq . "data.removed"}}撤掉覆盖目录{{else if eq . "app.promoted"}}切换主入口{{else if eq . "app.visibility_changed"}}修改可见性{{else if eq . "app.renamed"}}修改 slug{{else if eq . "app.version_deleted"}}删除版本{{else if eq . "app.deleted"}}删除 App{{else if eq . "app.restored"}}从回收站恢复{{else if eq . "app.purged"}}立即清理{{else if eq . "agent.approved"}}批准授权{{else if eq . "agent.denied"}}拒绝授权{{else if eq . "agent.issued"}}手动签发 token{{else if eq . "agent.revoked"}}撤销 Agent{{else if eq . "owner.logged_out"}}退出登录{{else if eq . "preview.deleted"}}删除预览{{else}}{{.}}{{end}}{{end}}
 
 {{define "audit"}}<div class="tbl tbl-audit"><table>
 <thead><tr><th>时间</th><th>操作者</th><th>动作</th><th>App</th><th>摘要</th></tr></thead>
@@ -57,3 +65,6 @@
 {{define "i-x"}}<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>{{end}}
 {{define "i-alert"}}<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2.25L14.25 13.5H1.75z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M8 6.5v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="11.6" r=".9" fill="currentColor"/></svg>{{end}}
 {{define "i-terminal"}}<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.75" y="2.75" width="12.5" height="10.5" rx="1.75" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M4.5 6.5L6.5 8l-2 1.5M8 10h3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>{{end}}
+{{define "i-clock"}}<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 4.75V8l2.25 1.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>{{end}}
+{{define "i-search"}}<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10.4 10.4L14 14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>{{end}}
+{{define "i-arrow-left"}}<svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M13 8H3.5M7.5 4L3.5 8l4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>{{end}}

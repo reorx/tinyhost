@@ -1,3 +1,48 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>tinyhost</title></head>
-<body><main><h1>tinyhost</h1><p>这是一个 tinyhost 静态网站发布服务。</p><p>Agent 请先安装 CLI：</p><pre><code>{{.InstallCommand}}</code></pre><p>然后运行 <code>tinyhost skill</code>，或直接阅读 <a href="/skill.md">使用说明</a>。</p><p>服务器：{{.AppsURL}} · 版本：{{.Version}}</p></main></body></html>
+<html lang="zh-CN">
+<head>{{template "meta"}}
+<title>tinyhost</title>
+<meta name="description" content="tinyhost：给 Agent 用的静态网站发布服务。先安装 CLI，再读 tinyhost skill。">
+<link rel="alternate" type="text/markdown" href="/skill.md" title="tinyhost skill">
+{{template "assets" "/_/static"}}</head>
+<body class="site">
+<main class="site-main">
+  <header class="site-head">{{template "site-brand"}}</header>
+
+  <section class="hero" aria-labelledby="hero-title">
+    <h1 id="hero-title">这是一个 tinyhost 服务</h1>
+    <p class="lead">给 Agent 用的静态网站发布服务。Agent 用一条命令把目录发布成网页，每个 App 都在自己的路径下，例如 <span class="mono nowrap">{{.AppsURL}}/&lt;slug&gt;/</span>。</p>
+  </section>
+
+  <section aria-labelledby="start-title">
+    <h2 id="start-title" class="site-label">Agent 从这里开始</h2>
+    <ol class="steps">
+      <li>
+        <h3>安装 CLI</h3>
+        <div class="cmd cmd-main"><code>{{.InstallCommand}}</code><button type="button" class="btn btn-sm btn-primary" data-copy="{{.InstallCommand}}" hidden>复制</button></div>
+        <p class="hint">识别 macOS / Linux 和 CPU 架构，校验后装到 <code>~/.local/bin</code>，并写好这台服务器的地址。再运行一次就是升级。</p>
+      </li>
+      <li>
+        <h3>读使用说明</h3>
+        <div class="cmd"><code>tinyhost skill</code><button type="button" class="btn btn-sm" data-copy="tinyhost skill" hidden>复制</button></div>
+        <p class="hint">输出完整的 skill（Markdown），可以直接存成 Agent 的 skill 文件。没装 CLI 也能先读 <a class="mono" href="/skill.md">/skill.md</a>，内容相同。</p>
+      </li>
+      <li>
+        <h3>申请授权</h3>
+        <p class="step-text">运行 <code>tinyhost login</code>，把输出的链接原样发给你的用户，等对方在后台批准。</p>
+      </li>
+    </ol>
+  </section>
+
+  <aside class="callout callout-note" aria-label="安全提示">
+    {{template "i-shield"}}
+    <div>
+      <p class="callout-title">这个域名上的页面不会向你要 tinyhost 的密码。</p>
+      <p>这里托管的是 Agent 生成的网页。哪个页面要你输入 tinyhost 的密码，哪个就是假的。</p>
+    </div>
+  </aside>
+
+  <footer class="site-foot"><span class="mono">{{.AppsURL}}</span><span>tinyhost <span class="mono">{{.Version}}</span></span></footer>
+</main>
+</body>
+</html>
