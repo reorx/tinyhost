@@ -235,15 +235,15 @@ CREATE TABLE previews (
 
 ### 实施步骤
 
-- [ ] previews 表和 store 函数，GC 扩展，先写测试
-- [ ] 把验收标准 1–5、7–10 写成行为测试；6 写成手动验收脚本
-- [ ] 预览 API 和 `/_p/` 托管，后台预览页
-- [ ] `bundle.CheckAbsolutePaths` 及测试
-- [ ] `skill/SKILL.md` 正文、`skill/install.sh`、`/skill.md`、`/install.sh`、`/_/dl/` 代理（测试用 httptest 假的 GitHub）
-- [ ] `internal/notify`、事件回调接线，测试用 httptest 假的 ntfy
-- [ ] CLI：`preview`、`previews`、`skill`、版本提示，golden 快照
-- [ ] 根路径说明页
-- [ ] 更新 `docs/json-output.md`、`AGENTS.md`
+- [x] previews 表和 store 函数，GC 扩展，先写测试
+- [x] 把验收标准 1–5、7–10 写成行为测试；6 写成手动验收脚本
+- [x] 预览 API 和 `/_p/` 托管，后台预览页
+- [x] `bundle.CheckAbsolutePaths` 及测试
+- [x] `skill/SKILL.md` 正文、`skill/install.sh`、`/skill.md`、`/install.sh`、`/_/dl/` 代理（测试用 httptest 假的 GitHub）
+- [x] `internal/notify`、事件回调接线，测试用 httptest 假的 ntfy
+- [x] CLI：`preview`、`previews`、`skill`、版本提示，golden 快照
+- [x] 根路径说明页
+- [x] 更新 `docs/json-output.md`、`AGENTS.md`
 - [ ] 手动验收：在一个 Linux 容器里跑安装脚本（容器跑在服务器或 CI 上，不在本机跑 docker），`--dl-dir` 指向 `make dist` 的产物，截图存到 `tmp/<日期>-m3-preview-distribution/`
 
 ### 测试与验证
