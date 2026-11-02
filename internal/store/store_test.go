@@ -200,6 +200,42 @@ func TestVersionsSnapshotCurrentLayersAndRollback(t *testing.T) {
 	}
 }
 
+// Behavior: redeploying without a title preserves it, explicit titles update it, and data pushes leave it unchanged.
+func TestRedeployPreservesTitleUnlessANewTitleIsProvidedAndDataPushKeepsIt(t *testing.T) {
+	store := openTest(t)
+	app := appTest(t, store)
+	for _, step := range []struct {
+		name  string
+		title string
+		want  string
+		data  bool
+	}{
+		{name: "deploy without title", want: "Title"},
+		{name: "deploy with new title", title: "New title", want: "New title"},
+		{name: "redeploy without title", want: "New title"},
+		{name: "push data", want: "New title", data: true},
+	} {
+		t.Run(step.name, func(t *testing.T) {
+			var err error
+			if step.data {
+				_, err = store.CommitDataVersion(app.ID, "data/", layer("data/a.json", "data"), "", "c_b")
+			} else {
+				_, err = store.CommitAppVersion(app.ID, layer("index.html", "app"), bundle.Manifest{Title: step.title}, "", "c_a", true)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			record, err := store.AppBySlug(app.Slug)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if record.Title != step.want {
+				t.Fatalf("title = %q, want %q", record.Title, step.want)
+			}
+		})
+	}
+}
+
 // Behavior: empty apps accept data with an empty base; nested overlays are rejected, while equal directories replace a layer.
 func TestDataOnEmptyAppsAndOverlayValidation(t *testing.T) {
 	store := openTest(t)

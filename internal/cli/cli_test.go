@@ -131,6 +131,52 @@ func TestDeployCreatesURLsAndPreservesManifest(t *testing.T) {
 	}
 }
 
+// Behavior: manifest and --title set titles, omitted titles preserve them, --title takes precedence, and data pushes never change them.
+func TestDeployTitleSourcesPreserveAndUpdateTitlesWhileDataPushLeavesThemUnchanged(t *testing.T) {
+	for _, source := range []string{"manifest", "flag"} {
+		t.Run(source, func(t *testing.T) {
+			f := setup(t)
+			args := []string{"deploy", f.site, "--app", "demo", "--create", "--public"}
+			if source == "manifest" {
+				f.write("tinyhost.json", `{"title":"原标题"}`)
+			} else {
+				args = append(args, "--title", "原标题")
+			}
+			f.ok(args...)
+			assertTitle := func(want string) {
+				t.Helper()
+				var detail api.AppDetail
+				if err := json.Unmarshal([]byte(f.ok("info", "demo", "--json")), &detail); err != nil {
+					t.Fatal(err)
+				}
+				if detail.App.Title != want {
+					t.Errorf("title = %q, want %q", detail.App.Title, want)
+				}
+			}
+			assertTitle("原标题")
+
+			if err := os.Remove(filepath.Join(f.site, "tinyhost.json")); err != nil {
+				t.Fatal(err)
+			}
+			f.ok("deploy", f.site, "--app", "demo")
+			assertTitle("原标题")
+			f.write("tinyhost.json", `{"app":"demo"}`)
+			f.ok("deploy", f.site)
+			assertTitle("原标题")
+
+			f.write("tinyhost.json", `{"app":"demo","title":"manifest 新标题"}`)
+			f.ok("deploy", f.site)
+			assertTitle("manifest 新标题")
+			f.ok("deploy", f.site, "--title", "参数新标题")
+			assertTitle("参数新标题")
+
+			f.write("data/tinyhost.json", `{"title":"数据包不能改标题"}`)
+			f.ok("data", "push", filepath.Join(f.site, "data"), "--app", "demo", "--to", "data/")
+			assertTitle("参数新标题")
+		})
+	}
+}
+
 // Behavior: deploy defaults to the current directory and manifest app, preserving immutable versions and no-promote.
 func TestRedeployUsesCurrentDirectoryAndCanLeaveMainUnchanged(t *testing.T) {
 	f := setup(t)

@@ -144,7 +144,11 @@ func (s *Store) CommitAppVersion(app string, layer *Layer, manifest bundle.Manif
 			}
 			v.Overlays = old.Overlays
 		}
-		if err = insertVersion(tx, v, promote, &manifest.Title); err != nil {
+		var title *string
+		if manifest.Title != "" {
+			title = &manifest.Title
+		}
+		if err = insertVersion(tx, v, promote, title); err != nil {
 			return err
 		}
 		out = v
