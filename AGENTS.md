@@ -52,8 +52,8 @@
 - `skill/`：`SKILL.md` 和 `install.sh` 都 embed 进来。`Render(server)` 填入服务器地址和构建版本，`/skill.md` 和 `tinyhost skill` 共用它，所以服务器和 CLI 要用同一个 VERSION 构建。`RenderInstall` 对 shell 和 JSON 做安全引用。安装脚本写 `config.json`（0600）的目录必须和 Go 的 `os.UserConfigDir` 一致：macOS 是 `~/Library/Application Support/tinyhost`，Linux 遵守 `XDG_CONFIG_HOME`。
 - `cmd/tinyhost`：只调 CLI 的 Run 并返回退出码，不引入服务端和 SQLite 的依赖。
 - `cmd/tinyhost-server`：`serve` / `passwd` / `token create` / `gc` / `version`。`serve` 必须给出和 apps 不同 Host 的 `--admin-url`；`--insecure-cookies` 只用于本地。数据库在 `<data-dir>/tinyhost.db`；相对的数据目录在入口处先转成绝对路径再传给 `store.Open`。
-- `.github/workflows/`：CI 在 push 和 PR 时跑 gofmt 检查、测试和 vet，Go 版本和 mise 一样锁在 1.27.3。`v*` tag 触发 Release 和 ghcr 的双架构镜像；版本号带连字符的是 prerelease，镜像不推 `latest`。已推的 tag 不移动、不删除，修好后递增 rc 号。
-- `Dockerfile`：直接用同版本 `make dist` 产出的服务端包，不重新编译；基于 distroless/static，只含服务端，数据在 `/data`，默认监听 `:3471`。本机不跑 Docker，镜像的构建和双架构验证都在 CI 里。
+- `.github/workflows/`：CI 在 push 和 PR 时跑 gofmt 检查、测试和 vet，Go 版本和 mise 一样锁在 1.27.3。`v*` tag 触发 Release 和 ghcr 的双架构镜像；版本号带连字符的是 prerelease，镜像不推 `latest`。已推的 tag 不移动、不删除，修好后递增 rc 号。`accept-install.yml` 是手动触发的线上安装验收：输入服务器地址和期望版本，在 linux amd64/arm64 和 macOS 的 runner 上跑 `scripts/accept-install.sh`（除了 CLI 版本，还核对 whoami 的 `X-Tinyhost-Version`），证据作为 artifact 上传；每跑一次会在后台留下 3 条 `install-acceptance` 待批准申请。
+- `Dockerfile`：直接用同版本 `make dist` 产出的服务端包，不重新编译；基于 distroless/static，只含服务端，数据在 `/data`，默认监听 `:3471`。本机不跑 Docker，镜像的构建和双架构验证都在 CI 里。生产用 Docker Compose 跑这个镜像，容器以 distroless 的 nonroot（65532）用户、只读根文件系统运行，数据目录 bind mount 到 `/data`。镜像的 CMD 和运维命令（`docker compose exec server /tinyhost-server passwd|token|gc`）依赖 `TINYHOST_DATA_DIR=/data` 和 `--listen :3471`，改 Dockerfile 的默认参数时要同步通知部署方。服务端没有探活子命令，所以 compose 拿不到 healthy 状态。
 
 ## 文档
 

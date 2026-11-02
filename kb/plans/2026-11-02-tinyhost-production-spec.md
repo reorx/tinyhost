@@ -80,7 +80,7 @@ tags:
 
 ### 方案
 
-> **2026-11-02 变更（用户决定）**：上线前核实发现 reorx.com 下的其他服务和 apps 同站时有风险，所以 apps 改用独立注册域名 `https://tinyhost.space`，后台改为 `https://th.reorx.com`；服务器改为 tc-sg-01。本 spec 下文的 `th.reorx.com`（apps）、`th-admin.reorx.com`、ali-hk-01 都按这条理解。仓库一开始就公开（MIT）。
+> **2026-11-02 变更（用户决定）**：上线前核实发现 reorx.com 下的其他服务和 apps 同站时有风险，所以 apps 改用独立注册域名 `https://tinyhost.space`，后台改为 `https://th.reorx.com`；服务器改为 tc-sg-01。本 spec 下文的 `th.reorx.com`（apps）、`th-admin.reorx.com`、ali-hk-01 都按这条理解。仓库一开始就公开（MIT）。运行方式也从 systemd + Release 二进制改为 Docker Compose 跑公开发布的 ghcr 镜像，和服务器上其他业务应用一致；升级就是改镜像版本、跑 playbook。
 
 照 deploy 仓库现有的套路，新增一个 `tinyhost` role，部署在 ali-hk-01，以 systemd 服务的形式运行（不用容器），二进制从 GitHub Release 下载。备份在 backup role 里加一组 `tinyhost` 的 timer。tinyhost 仓库新增 release workflow，产出物的命名要和服务端 `/_/dl/` 代理、安装脚本的预期一致。
 
@@ -132,7 +132,7 @@ tags:
 - [x] deploy 仓库：`tinyhost` role、group_vars、Caddy 站点、DNS 记录，`--limit ali-hk-01 --tags tinyhost` 下发（2026-11-02 改为下发到 tc-sg-01，DNS 由用户添加）
 - [ ] 服务器上设置密码、填 ntfy token、重启；从外网 curl 验证两个域名（curl 验证已完成；密码和 token 等用户设置）
 - [x] backup role 的 tinyhost 任务，手动触发一次并确认 OSS 上有文件（2026-11-02，空实例；带数据的备份在恢复演练里再做一次）
-- [ ] 恢复演练（验收 6）
+- [x] 恢复演练（验收 6）（2026-11-02 先在 systemd 布局上演练两次，迁到 compose 后又演练一次，3 个测试 App 的内容 hash 全部一致；SOP 在 deploy 仓库 `kb/docs/tinyhost.md`）
 - [ ] 真实 Agent 端到端验收（验收 3–5），截图存到 `tmp/<日期>-m4-production-e2e/`
 - [ ] README、LICENSE、SECURITY.md；**公开仓库前请用户确认**
 - [ ] 打正式版 `v0.1.0` tag，更新 deploy 仓库的版本号
