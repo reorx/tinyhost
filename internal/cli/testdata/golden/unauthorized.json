@@ -1,7 +1,7 @@
 {
   "error": {
     "code": "unauthorized",
-    "hint": "请重新获取 token",
+    "hint": "运行 tinyhost login 重新授权",
     "message": "token 无效、已撤销或已过期"
   }
 }

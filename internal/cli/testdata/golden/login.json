@@ -1,0 +1,5 @@
+{
+  "name": "approved",
+  "server": "http://server.test",
+  "status": "authorized"
+}

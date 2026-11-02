@@ -52,7 +52,7 @@ func main() {
 }
 func run(args []string, out io.Writer) error {
 	if len(args) == 0 || args[0] == "help" || args[0] == "--help" {
-		_, err := fmt.Fprintln(out, "tinyhost-server: serve | token create --name NAME [--ttl 30d] | gc | version")
+		_, err := fmt.Fprintln(out, "tinyhost-server: serve | passwd | token create --name NAME [--ttl 30d] | gc | version")
 		return err
 	}
 	c := commands[args[0]]
@@ -133,6 +133,9 @@ func serve(args []string, out io.Writer) error {
 	if err != nil {
 		return err
 	}
+	if c.AdminURL == "" {
+		return fmt.Errorf("serve requires --admin-url")
+	}
 	if err = c.Validate(); err != nil {
 		return err
 	}
@@ -164,6 +167,9 @@ func serve(args []string, out io.Writer) error {
 			_ = httpServer.Close()
 		}
 	}()
+	if c.InsecureCookies {
+		slog.Warn("insecure cookies enabled; development only")
+	}
 	slog.Info("listening", "address", listen, "apps_url", c.AppsURL)
 	err = httpServer.ListenAndServe()
 	stop()

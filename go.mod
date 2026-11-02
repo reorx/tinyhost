@@ -2,7 +2,11 @@ module github.com/reorx/tinyhost
 
 go 1.27.0
 
-require modernc.org/sqlite v1.61.1
+require (
+	golang.org/x/crypto v0.58.0
+	golang.org/x/term v0.47.0
+	modernc.org/sqlite v1.61.1
+)
 
 require (
 	github.com/dustin/go-humanize v1.1.0 // indirect

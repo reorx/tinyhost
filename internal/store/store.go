@@ -102,14 +102,22 @@ func migrate(db *sql.DB) error {
 	if err = tx.QueryRow("PRAGMA user_version").Scan(&n); err != nil {
 		return err
 	}
-	if n > 1 {
-		return fmt.Errorf("database schema %d is newer than supported version 1", n)
+	if n > 2 {
+		return fmt.Errorf("database schema %d is newer than supported version 2", n)
 	}
 	if n == 0 {
 		if _, err = tx.Exec(schema); err != nil {
 			return err
 		}
 		if _, err = tx.Exec("PRAGMA user_version=1"); err != nil {
+			return err
+		}
+	}
+	if n < 2 {
+		if _, err = tx.Exec(authSchema); err != nil {
+			return err
+		}
+		if _, err = tx.Exec("PRAGMA user_version=2"); err != nil {
 			return err
 		}
 	}

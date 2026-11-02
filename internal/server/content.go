@@ -4,6 +4,7 @@ import (
 	"errors"
 	"mime"
 	"net/http"
+	"net/url"
 	"path"
 	"strings"
 	"time"
@@ -54,8 +55,20 @@ func (s *Server) content(w http.ResponseWriter, r *http.Request) {
 	// Authorization precedes version and file lookup to avoid disclosing private metadata.
 	if a.Visibility != "public" {
 		w.Header().Set("Cache-Control", "no-store")
-		http.Error(w, "需要登录", 401)
-		return
+		ok, err := s.hasSession(r, "viewer")
+		if err != nil {
+			s.internal(w, err)
+			return
+		}
+		if !ok {
+			if r.Header.Get("Sec-Fetch-Mode") == "navigate" || strings.Contains(r.Header.Get("Accept"), "text/html") {
+				http.Redirect(w, r, strings.TrimRight(s.Config.AdminURL, "/")+"/view-auth?next="+url.QueryEscape(r.URL.RequestURI()), 302)
+			} else {
+				http.Error(w, "需要登录", 401)
+			}
+			return
+		}
+		w.Header().Set("Cache-Control", "private, no-cache")
 	}
 	v, err := s.Store.ResolveVersion(a.ID, number)
 	if err != nil {
@@ -160,14 +173,18 @@ func (s *Server) serveFile(w http.ResponseWriter, r *http.Request, file *store.F
 	defer data.Close()
 	w.Header().Set("Content-Type", contentType(file.Path))
 	w.Header().Set("ETag", `"`+file.Blob+`"`)
-	if number == 0 {
+	if w.Header().Get("Cache-Control") == "private, no-cache" {
+		// Viewer-authorized responses must never enter shared caches.
+	} else if number == 0 {
 		w.Header().Set("Cache-Control", "no-cache")
 	} else {
 		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 	}
 	if status != 200 {
 		// A custom error document remains a 404 for conditional and range requests.
-		w.Header().Set("Cache-Control", "no-cache")
+		if w.Header().Get("Cache-Control") != "private, no-cache" {
+			w.Header().Set("Cache-Control", "no-cache")
+		}
 		w.WriteHeader(status)
 		if r.Method != "HEAD" {
 			_, _ = data.WriteTo(w)

@@ -62,6 +62,8 @@ type Server struct {
 	// Upload and GC must not race between blob publication and SQL commit.
 	// The lock also protects GC's reference snapshot against new uploads.
 	lifecycle sync.RWMutex
+	rateMu    sync.Mutex
+	rates     map[string]rateBucket
 }
 
 func (s *Server) now() time.Time {
@@ -111,6 +113,10 @@ func (w *responseLog) Unwrap() http.ResponseWriter { return w.ResponseWriter }
 
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
+	adminHandler := s.adminHandler()
+	mux.HandleFunc("POST /_/api/v1/device/code", s.deviceCode)
+	mux.HandleFunc("POST /_/api/v1/device/token", s.deviceToken)
+	mux.HandleFunc("POST /_/api/v1/logout", s.auth(s.agentLogout))
 	mux.HandleFunc("GET /_/api/v1/whoami", s.auth(s.whoami))
 	mux.HandleFunc("GET /_/api/v1/apps", s.auth(s.apps))
 	mux.HandleFunc("GET /_/api/v1/apps/{slug}", s.auth(s.info))
@@ -147,7 +153,7 @@ func (s *Server) Handler() http.Handler {
 		admin, _ := url.Parse(s.Config.AdminURL)
 		if apps == nil || !strings.EqualFold(r.Host, apps.Host) {
 			if admin != nil && admin.Host != "" && strings.EqualFold(r.Host, admin.Host) {
-				http.NotFound(w, r)
+				adminHandler.ServeHTTP(w, r)
 			} else {
 				http.Error(w, "Misdirected Request", 421)
 			}
@@ -156,6 +162,10 @@ func (s *Server) Handler() http.Handler {
 		if strings.HasPrefix(r.URL.Path, "/_/api/v1/") {
 			w.Header().Set("Cache-Control", "no-store")
 			mux.ServeHTTP(w, r)
+			return
+		}
+		if r.URL.Path == "/_/auth" && (r.Method == "GET" || r.Method == "HEAD") {
+			s.redeemView(w, r)
 			return
 		}
 		s.content(w, r)
@@ -177,7 +187,7 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		parts := strings.Fields(r.Header.Get("Authorization"))
 		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
-			fail(w, 401, "unauthorized", "需要有效的 Agent token", "使用 Authorization: Bearer <token>")
+			fail(w, 401, "unauthorized", "需要有效的 Agent token", "运行 tinyhost login 重新授权")
 			return
 		}
 		c, err := s.Store.ClientByTokenHash(token.Hash(parts[1]))
@@ -186,7 +196,7 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		if c == nil || c.RevokedAt != nil || (c.ExpiresAt != nil && *c.ExpiresAt <= s.now().Unix()) {
-			fail(w, 401, "unauthorized", "token 无效、已撤销或已过期", "请重新获取 token")
+			fail(w, 401, "unauthorized", "token 无效、已撤销或已过期", "运行 tinyhost login 重新授权")
 			return
 		}
 		ip := r.RemoteAddr

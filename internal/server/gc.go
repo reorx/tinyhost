@@ -11,6 +11,9 @@ import (
 func (s *Server) GC() error {
 	s.lifecycle.Lock()
 	defer s.lifecycle.Unlock()
+	if err := s.Store.PruneAuth(s.now().Unix()); err != nil {
+		return err
+	}
 	keep := s.Config.DataVersionsKeep
 	if keep == 0 {
 		keep = 20

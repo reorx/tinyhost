@@ -50,10 +50,16 @@ func (c *context) serverURL() (string, error) {
 	return strings.TrimRight(raw, "/"), nil
 }
 func (c *context) request(method, path string, query url.Values, body io.Reader, contentType string, result any) error {
-	key := os.Getenv("TINYHOST_TOKEN")
-	if key == "" {
-		return &commandError{detail: api.ErrorDetail{Code: "unauthorized", Message: "缺少 TINYHOST_TOKEN", Hint: "先用 tinyhost-server token create 签发 token，再设置 TINYHOST_TOKEN"}, exit: 3}
+	key, err := c.token()
+	if err != nil {
+		return err
 	}
+	if key == "" {
+		return &commandError{detail: api.ErrorDetail{Code: "unauthorized", Message: "缺少 Agent token", Hint: "运行 tinyhost login 重新授权"}, exit: 3}
+	}
+	return c.httpRequest(method, path, query, body, contentType, key, result)
+}
+func (c *context) httpRequest(method, path string, query url.Values, body io.Reader, contentType, key string, result any) error {
 	origin, err := c.serverURL()
 	if err != nil {
 		return err
@@ -63,12 +69,18 @@ func (c *context) request(method, path string, query url.Values, body io.Reader,
 		return err
 	}
 	req.URL.RawQuery = query.Encode()
-	req.Header.Set("Authorization", "Bearer "+key)
+	if key != "" {
+		req.Header.Set("Authorization", "Bearer "+key)
+	}
 	req.Header.Set("Accept", "application/json")
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
 	}
-	client := &http.Client{Timeout: 2 * time.Minute, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	timeout := c.requestTimeout
+	if timeout <= 0 {
+		timeout = 2 * time.Minute
+	}
+	client := &http.Client{Timeout: timeout, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	response, err := client.Do(req)
 	if err != nil {
 		return err

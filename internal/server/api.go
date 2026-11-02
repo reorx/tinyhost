@@ -148,6 +148,13 @@ func (s *Server) deploy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	create := q.Get("create") == "1"
+	if create {
+		a, err = s.Store.SlugOwner(name)
+		if err != nil {
+			s.internal(w, err)
+			return
+		}
+	}
 	if create && a != nil {
 		s.taken(w, a)
 		return
@@ -174,7 +181,7 @@ func (s *Server) deploy(w http.ResponseWriter, r *http.Request) {
 	if create {
 		a, err = s.Store.CreateApp(name, summary.Manifest.Title, visibility, client(r).ID)
 		if err != nil {
-			existing, lookupErr := s.Store.AppBySlug(name)
+			existing, lookupErr := s.Store.SlugOwner(name)
 			if lookupErr == nil && existing != nil {
 				s.taken(w, existing)
 			} else {

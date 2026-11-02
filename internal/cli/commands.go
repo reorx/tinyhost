@@ -14,6 +14,7 @@ import (
 	"github.com/reorx/tinyhost/internal/bundle"
 	"github.com/reorx/tinyhost/internal/slug"
 	"github.com/reorx/tinyhost/internal/version"
+	"github.com/reorx/tinyhost/skill"
 )
 
 func init() {
@@ -29,7 +30,7 @@ func init() {
 	register(&command{Name: "whoami", Summary: "查看当前 Agent 和服务器", Run: whoami})
 	register(&command{Name: "version", Summary: "显示 CLI 版本", Run: localVersion})
 	register(&command{Name: "help", Summary: "显示帮助", Run: help})
-	register(&command{Name: "skill", Summary: "显示 Agent 使用说明（M3 补全）", Run: skill})
+	register(&command{Name: "skill", Summary: "显示 Agent 使用说明（M3 补全）", Run: skillCommand})
 }
 func deploy(c *context, args []string) (any, error) {
 	fs := c.flags("deploy")
@@ -265,7 +266,7 @@ func help(c *context, args []string) (any, error) {
 	_, err := positionals(c, "help", args, 0)
 	return api.HelpResult{Help: helpText()}, err
 }
-func skill(c *context, args []string) (any, error) {
+func skillCommand(c *context, args []string) (any, error) {
 	_, err := positionals(c, "skill", args, 0)
-	return api.SkillResult{Skill: "tinyhost Agent 使用说明将在 M3 补全。M1 请运行 tinyhost help，设置 TINYHOST_SERVER 和 TINYHOST_TOKEN 后发布。\n"}, err
+	return api.SkillResult{Skill: skill.Text}, err
 }

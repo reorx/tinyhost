@@ -85,6 +85,24 @@ func (c *context) printHuman(value any) error {
 			return err
 		}
 		fmt.Fprintf(&b, "Agent：%s（%s）\n服务器：%s\n服务端版本：%s\n", result.Client.Name, result.Client.ID, origin, result.ServerVersion)
+		if result.Client.ExpiresAt != nil {
+			fmt.Fprintf(&b, "token 到期：%s\n", timestamp(*result.Client.ExpiresAt))
+		} else {
+			b.WriteString("token 到期：永久\n")
+		}
+	case api.LoginResult:
+		switch result.Status {
+		case "environment":
+			b.WriteString("正在使用环境变量里的 token\n")
+		case "already_logged_in":
+			fmt.Fprintf(&b, "已登录为 %s\n", result.Name)
+		case "pending":
+			b.WriteString("等待中；用户批准后再运行一次 tinyhost login\n")
+		default:
+			fmt.Fprintf(&b, "✓ 已授权为 %s\n", result.Name)
+		}
+	case api.LogoutResult:
+		b.WriteString("✓ 已退出\n")
 	case api.VersionResult:
 		fmt.Fprintln(&b, result.Version)
 	case api.HelpResult:

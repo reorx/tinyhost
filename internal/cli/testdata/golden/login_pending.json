@@ -1,0 +1,6 @@
+{
+  "server": "http://server.test",
+  "status": "pending",
+  "user_code": "BCDF-GHJK",
+  "verification_uri_complete": "http://admin.test/device?code=BCDF-GHJK"
+}

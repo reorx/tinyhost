@@ -496,7 +496,7 @@ func TestHostRoutingAndQueries(t *testing.T) {
 	for _, tc := range []struct {
 		host   string
 		status int
-	}{{"admin.test", 404}, {"other.test", 421}} {
+	}{{"admin.test", 200}, {"other.test", 421}} {
 		req, err := http.NewRequest("GET", f.http.URL+"/", nil)
 		if err != nil {
 			t.Fatal(err)

@@ -100,3 +100,36 @@ type HelpResult struct {
 type SkillResult struct {
 	Skill string `json:"skill"`
 }
+
+// Device authorization responses never expose stored hashes.
+type DeviceCodeRequest struct {
+	Name       string `json:"name"`
+	Hostname   string `json:"hostname"`
+	OS         string `json:"os"`
+	Arch       string `json:"arch"`
+	CLIVersion string `json:"cli_version"`
+}
+type DeviceCodeResult struct {
+	DeviceCode              string `json:"device_code"`
+	UserCode                string `json:"user_code"`
+	VerificationURI         string `json:"verification_uri"`
+	VerificationURIComplete string `json:"verification_uri_complete"`
+	ExpiresIn               int    `json:"expires_in"`
+	Interval                int    `json:"interval"`
+}
+type DeviceTokenResult struct {
+	Token     string `json:"token"`
+	Client    Client `json:"client"`
+	ExpiresAt *int64 `json:"expires_at"`
+}
+type LogoutResult struct {
+	LoggedOut bool `json:"logged_out"`
+}
+type LoginResult struct {
+	Status                  string `json:"status"`
+	Name                    string `json:"name,omitempty"`
+	Server                  string `json:"server,omitempty"`
+	ExpiresAt               *int64 `json:"expires_at,omitempty"`
+	UserCode                string `json:"user_code,omitempty"`
+	VerificationURIComplete string `json:"verification_uri_complete,omitempty"`
+}

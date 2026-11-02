@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"time"
 
 	"github.com/reorx/tinyhost/internal/api"
 )
@@ -21,6 +22,8 @@ type command struct {
 type context struct {
 	stdout, stderr io.Writer
 	json           bool
+	pending        bool
+	requestTimeout time.Duration
 	server         string
 }
 type commandError struct {
@@ -58,6 +61,9 @@ func Run(args []string, stdout, stderr io.Writer) int {
 		}
 	}
 	if err == nil {
+		if c.pending {
+			return 4
+		}
 		return 0
 	}
 	if errors.Is(err, flag.ErrHelp) {
@@ -179,6 +185,6 @@ func helpText() string {
 	for _, cmd := range commands {
 		fmt.Fprintf(&b, "  %-12s %s\n", cmd.Name, cmd.Summary)
 	}
-	b.WriteString("\n全局参数 --server、--json 可放在命令前后。\n服务器：--server > TINYHOST_SERVER > 系统配置目录 tinyhost/config.json。\n凭证：设置 TINYHOST_TOKEN（M1 使用服务端 token create 签发）。\n退出码：0 成功，1 一般错误，2 用法错误，3 未授权，4 授权等待中（M2）。\n")
+	b.WriteString("\n全局参数 --server、--json 可放在命令前后。\n服务器：--server > TINYHOST_SERVER > 系统配置目录 tinyhost/config.json。\n凭证：tinyhost login，或设置 TINYHOST_TOKEN。\n退出码：0 成功，1 一般错误，2 用法错误，3 未授权，4 授权等待中。\n")
 	return b.String()
 }

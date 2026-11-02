@@ -78,3 +78,30 @@ func TestRelativeDataDirectoryWorks(t *testing.T) {
 		}
 	}
 }
+
+// Behavior: passwd hashes piped input with bcrypt cost twelve without storing plaintext.
+func TestPasswdStoresBcryptHash(t *testing.T) {
+	dir := t.TempDir()
+	input, err := os.CreateTemp(t.TempDir(), "password")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer input.Close()
+	input.WriteString("test-password\n")
+	input.Seek(0, 0)
+	old := os.Stdin
+	os.Stdin = input
+	defer func() { os.Stdin = old }()
+	if err = run([]string{"passwd", "--data-dir", dir}, &bytes.Buffer{}); err != nil {
+		t.Fatal(err)
+	}
+	db, err := store.Open(filepath.Join(dir, "tinyhost.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	hash, err := db.Setting("owner_password_hash")
+	if err != nil || !strings.HasPrefix(hash, "$2a$12$") {
+		t.Fatal(hash, err)
+	}
+}

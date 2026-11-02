@@ -1,0 +1,11 @@
+## 登录与凭证
+
+先设置服务器：`export TINYHOST_SERVER=https://th.reorx.com`，也可对每条命令传 `--server URL`。
+
+运行 `tinyhost login --name 名称`，把输出的授权链接和验证码发给用户，请用户在 admin 域名登录并批准。密码只在 admin 域名输入。默认等待 60 秒；退出码 4 表示等待批准，用户批准后再次运行相同服务器的 `tinyhost login`，会继续同一申请。可用 `--wait 120` 延长等待。
+
+被拒绝或过期的申请会报错并清除，再运行 login 创建新申请。已有有效凭证时直接显示已登录；`--force` 重新申请。凭证按服务器保存在系统配置目录 tinyhost/credentials.json，权限 0600；pending-login.json 也包含秘密，不要提交或转发。
+
+后续 deploy 等命令自动使用本地凭证。`TINYHOST_TOKEN` 优先于本地凭证；已设置时 login 提示正在使用环境变量，不发申请。`tinyhost whoami` 查看名称、服务器与到期时间。`tinyhost logout` 撤销当前 token 并移除该服务器的本地凭证；若用了环境变量，还需自行 unset TINYHOST_TOKEN。
+
+授权失败（退出码 3）时，运行 `tinyhost login` 重新授权。不要把 token、设备码或凭证文件发给用户；只发送验证码和批准链接。
