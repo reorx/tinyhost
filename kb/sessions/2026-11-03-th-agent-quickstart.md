@@ -55,6 +55,12 @@ tags:
 
 验收后已停服务、删数据目录、关浏览器会话并跑过 `mac-dev-cleanup --only browser --min-age 2`。
 
+## 发版与上线
+
+- 用户授权做完直接发版。README 理顺 quickstart 那句的语序后（`3eae5cf`），master CI 绿；`v0.1.1` 附注 tag 的 [Release 流水线](https://github.com/reorx/tinyhost/actions/runs/41585960264)一次绿，正式版 10 个资产，ghcr 镜像 `0.1.1` 有 amd64/arm64。
+- 部署由 deploy 目录的执行 agent 完成（deploy 仓库 `c97137d`）：升级前手动备份成功，App/版本数、密码哈希、ntfy key 前后一致；两个域名 `X-Tinyhost-Version: 0.1.1`，容器 healthy，线上 `admin.js` 已带 quickstart 逻辑；[accept-install](https://github.com/reorx/tinyhost/actions/runs/41588054889) 三平台绿，产生的 3 条授权申请未批准，会自动过期。
+- 线上 Agent 页需要 owner 登录，执行 agent 没有登录；在 `th.reorx.com/agents` 真点复制、粘贴给真实 Agent 的验收留给用户。
+
 ## 自己做的决定
 
 - 无偏离 plan 的产品行为。小改动：「查看全文」里在第 3 步加了一句让 Agent 自己起名的话，放在 `Run:` 前同一行（`First choose a short name that says who you are …`）；PRD 样例里没有这句，plan 的逻辑变动一节有要求。

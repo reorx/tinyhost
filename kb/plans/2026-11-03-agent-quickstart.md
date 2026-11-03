@@ -186,7 +186,7 @@ Set up tinyhost so you can publish web pages to https://tinyhost.space.
 - [x] 5. 改 README。
 - [x] 6. 本地实机验收（见下一节），截图归档到 `tmp/2026-11-03-agent-quickstart/`。
 - [x] 7. 写 session 总结 `kb/sessions/2026-11-03-th-agent-quickstart.md`，内容包括「页面清单增量」：`AgentsView` 新字段、新的 data 属性和名称规则。更新 AGENTS.md：`internal/server/console.go` 条目的页面清单指针里加上这份 session；`skill/` 条目补一句 `Quickstart` / `InstallAvailable`；`admin.js` 的职责列表补上 quickstart 名称替换。连同代码一起提交，一个提交。
-- [ ] 8. **停下来问用户**是否发版 `v0.1.1` 并部署。同意后：push tag，等 Release 和 ghcr 镜像完成，再按 deploy 仓库 `kb/docs/tinyhost.md` 的 SOP 部署（部署执行者在 deploy 目录里工作）；最后核对线上 `X-Tinyhost-Version`，打开 `https://th.reorx.com/agents` 确认面板里是 `https://tinyhost.space`。线上用真实 Agent 走一遍由用户做，或者由用户指定执行方式。
+- [x] 8. **停下来问用户**是否发版 `v0.1.1` 并部署。同意后：push tag，等 Release 和 ghcr 镜像完成，再按 deploy 仓库 `kb/docs/tinyhost.md` 的 SOP 部署（部署执行者在 deploy 目录里工作）；最后核对线上 `X-Tinyhost-Version`，打开 `https://th.reorx.com/agents` 确认面板里是 `https://tinyhost.space`。线上用真实 Agent 走一遍由用户做，或者由用户指定执行方式。
 
 ### 测试与验证
 

@@ -6,6 +6,7 @@
 
 - 2026-11-02：M1 核心发布、M2 授权与后台、M3 预览与分发已完成，都经过本地真实浏览器验收（截图在 `tmp/2026-11-02-m1-core-publish/`、`tmp/2026-11-02-m2-*`、`tmp/2026-11-02-m3-ui/`）。M3 的 Linux 容器安装验收并入 M4 验收 2。总 plan 和四期 spec 在 `kb/plans/2026-11-02-tinyhost*.md`。
 - 2026-11-03：M4 上线完成，正式版 `v0.1.0` 已发布 Release 和 ghcr 镜像，仓库公开在 `github.com/reorx/tinyhost`（MIT）。线上 apps `https://tinyhost.space`、后台 `https://th.reorx.com`，用 Docker Compose 运行镜像，用真实 Agent 和手机做过端到端验收。生产部署配置和运维 SOP 在独立的 deploy 仓库（见用户全局 CLAUDE.md 的 DevOps 约定）的 `kb/docs/tinyhost.md`，本仓库不存生产服务器细节、凭据和部署总结。验收发布时要核对线上服务的版本头和 CLI 版本一致。
+- 2026-11-03：`v0.1.1` 上线，后台 Agent 页新增可复制的 quickstart 指示（plan `kb/plans/2026-11-03-agent-quickstart.md`）。
 - **仓库是公开的**：提交、`kb/`、总结里不写密值、token、IP、OSS bucket 名，也不写 reorx.com 上其他服务的安全弱点。运维细节写进 deploy 仓库。
 
 ## 关键约束
