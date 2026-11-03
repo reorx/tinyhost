@@ -1,0 +1,106 @@
+name: Self-host acceptance
+
+# Follows the "Self-host" section of README.md on a clean ubuntu-latest runner,
+# once with the release binary and once with the container image.
+#
+# Deviations from the README, because a runner has no public DNS or certificates:
+#   - apps.example.com and admin.example.com point to 127.0.0.1 in /etc/hosts.
+#   - No Caddy and no HTTPS. The server is reached directly on port 3471, the
+#     public URLs are http://...:3471, and serve gets --insecure-cookies.
+#   - passwd reads the password from a pipe instead of a terminal (docker run -i,
+#     not -it); the README documents this form.
+#   - The CLI is installed from the instance's own install.sh, as an agent would.
+# Everything else (download, checksum, passwd, serve, token create, healthcheck)
+# uses the README commands for the requested version.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version, without the leading v
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  VERSION: ${{ inputs.version }}
+  APPS_URL: http://apps.example.com:3471
+  ADMIN_URL: http://admin.example.com:3471
+
+jobs:
+  binary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Hostnames
+        run: echo "127.0.0.1 apps.example.com admin.example.com" | sudo tee -a /etc/hosts
+      - name: Download and verify the server archive
+        run: |
+          mkdir -p "$RUNNER_TEMP/selfhost" && cd "$RUNNER_TEMP/selfhost"
+          curl -fLO "https://github.com/reorx/tinyhost/releases/download/v${VERSION}/tinyhost-server_${VERSION}_linux_amd64.tar.gz"
+          curl -fLO "https://github.com/reorx/tinyhost/releases/download/v${VERSION}/checksums.txt"
+          sha256sum --ignore-missing -c checksums.txt
+          tar -xzf "tinyhost-server_${VERSION}_linux_amd64.tar.gz"
+          test "$(./tinyhost-server version)" =
+      - name: Set the password and start the server
+        run: |
+          cd "$RUNNER_TEMP/selfhost"
+          mkdir -p data
+          chmod 700 data
+          printf '%s\n' 'selfhost-acceptance' | ./tinyhost-server passwd --data-dir ./data
+          ./tinyhost-server serve \
+            --data-dir ./data \
+            --listen 127.0.0.1:3471 \
+            --apps-url "$APPS_URL" \
+            --admin-url "$ADMIN_URL" \
+            --insecure-cookies > server.log 2>&1 &
+          echo $! > server.pid
+          for i in $(seq 1 30); do
+            ./tinyhost-server healthcheck --listen 127.0.0.1:3471 && exit 0
+            sleep 1
+          done
+          cat server.log
+          exit 1
+      - name: Publish and read back
+        run: bash scripts/accept-selfhost.sh "$RUNNER_TEMP/selfhost/tinyhost-server" "$RUNNER_TEMP/selfhost/data"
+      - name: Server log
+        if: always()
+        run: cat "$RUNNER_TEMP/selfhost/server.log" || true
+
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Hostnames
+        run: echo "127.0.0.1 apps.example.com admin.example.com" | sudo tee -a /etc/hosts
+      - name: Set the password and start the container
+        run: |
+          IMAGE="ghcr.io/reorx/tinyhost-server:${VERSION}"
+          docker volume create tinyhost-data
+          printf '%s\n' 'selfhost-acceptance' | docker run --rm -i \
+            -v tinyhost-data:/data \
+            "$IMAGE" \
+            passwd --data-dir /data
+          docker run -d --name tinyhost --restart unless-stopped \
+            -p 127.0.0.1:3471:3471 \
+            -v tinyhost-data:/data \
+            "$IMAGE" \
+            serve --data-dir /data --listen :3471 \
+            --apps-url "$APPS_URL" \
+            --admin-url "$ADMIN_URL" \
+            --insecure-cookies
+          for i in $(seq 1 60); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' tinyhost)
+            echo "health: $status"
+            if [ "$status" = healthy ]; then exit 0; fi
+            sleep 2
+          done
+          docker logs tinyhost
+          exit 1
+      - name: Healthcheck command
+        run: docker exec tinyhost /tinyhost-server healthcheck --listen :3471
+      - name: Publish and read back
+        run: bash scripts/accept-selfhost.sh "docker exec tinyhost /tinyhost-server" /data
+      - name: Server log
+        if: always()
+        run: docker logs tinyhost || true

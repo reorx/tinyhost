@@ -70,10 +70,10 @@ The examples below use those hostnames. Replace both with yours, configure their
 Download a server archive and `checksums.txt` from [Releases](https://github.com/reorx/tinyhost/releases). Server builds are available for Linux amd64/arm64 and macOS arm64. For example, on Linux amd64:
 
 ```sh
-curl -fLO https://github.com/reorx/tinyhost/releases/download/v0.1.0-rc.1/tinyhost-server_0.1.0-rc.1_linux_amd64.tar.gz
-curl -fLO https://github.com/reorx/tinyhost/releases/download/v0.1.0-rc.1/checksums.txt
+curl -fLO https://github.com/reorx/tinyhost/releases/download/v0.1.0/tinyhost-server_0.1.0_linux_amd64.tar.gz
+curl -fLO https://github.com/reorx/tinyhost/releases/download/v0.1.0/checksums.txt
 sha256sum --ignore-missing -c checksums.txt
-tar -xzf tinyhost-server_0.1.0-rc.1_linux_amd64.tar.gz
+tar -xzf tinyhost-server_0.1.0_linux_amd64.tar.gz
 mkdir -p data
 chmod 700 data
 ./tinyhost-server passwd --data-dir ./data
@@ -84,7 +84,7 @@ chmod 700 data
   --admin-url https://admin.example.com
 ```
 
-`passwd` prompts for the owner's password. Run `./tinyhost-server serve -h` to list every option; each one can also be set with a `TINYHOST_*` environment variable (for example `TINYHOST_APPS_URL`), and the command line wins. Run the server as a dedicated, unprivileged user, with write access to its data directory. The command stays in the foreground; use your service manager to keep it running across restarts. Keep the data directory at a stable location when upgrading the binary.
+`passwd` prompts for the owner's password; when stdin is not a terminal it reads one line instead (`printf '%s\n' "$PASSWORD" | ./tinyhost-server passwd --data-dir ./data`). Run `./tinyhost-server serve -h` to list every option; each one can also be set with a `TINYHOST_*` environment variable (for example `TINYHOST_APPS_URL`), and the command line wins. Run the server as a dedicated, unprivileged user, with write access to its data directory. The command stays in the foreground; use your service manager to keep it running across restarts. Keep the data directory at a stable location when upgrading the binary.
 
 ### Container
 
@@ -94,13 +94,13 @@ The server image is available for Linux amd64 and arm64. Initialize the password
 docker volume create tinyhost-data
 docker run --rm -it \
   -v tinyhost-data:/data \
-  ghcr.io/reorx/tinyhost-server:0.1.0-rc.1 \
+  ghcr.io/reorx/tinyhost-server:0.1.0 \
   passwd --data-dir /data
 
 docker run -d --name tinyhost --restart unless-stopped \
   -p 127.0.0.1:3471:3471 \
   -v tinyhost-data:/data \
-  ghcr.io/reorx/tinyhost-server:0.1.0-rc.1 \
+  ghcr.io/reorx/tinyhost-server:0.1.0 \
   serve --data-dir /data --listen :3471 \
   --apps-url https://apps.example.com \
   --admin-url https://admin.example.com
@@ -112,11 +112,7 @@ The image runs as the distroless nonroot user (UID/GID 65532). A new named volum
 sudo install -d -o 65532 -g 65532 -m 700 /srv/tinyhost/data
 ```
 
-and mount it with `-v /srv/tinyhost/data:/data`. A volume created by `0.1.0-rc.1`, which ran as root, needs its owner changed once:
-
-```sh
-docker run --rm -v tinyhost-data:/data busybox chown -R 65532:65532 /data
-```
+and mount it with `-v /srv/tinyhost/data:/data`.
 
 The image includes a Docker `HEALTHCHECK` (`tinyhost-server healthcheck`), so `docker ps` shows `healthy` once the server answers. If you change `--listen`, override the healthcheck with the same address. Monitors can poll `https://apps.example.com/_/health`, which returns `ok` and the version header only. Operator commands run as the same user, for example `docker exec tinyhost /tinyhost-server token create --name ci --data-dir /data`.
 
