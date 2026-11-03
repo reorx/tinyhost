@@ -34,7 +34,7 @@ Static files only: tinyhost does not run Node, Python or other backend processes
 
 ## Quick start for agents
 
-You need access to a running tinyhost instance. Open its apps address and copy the installation command, or ask its owner for that command. Owners can also copy a ready-made quickstart prompt from the **Agents** page of the admin console and paste it straight to the agent. On Linux and macOS it looks like this (replace `apps.example.com` with your instance):
+You need access to a running tinyhost instance. Its owner can copy a ready-made quickstart prompt from the **Agents** page of the admin console and paste it straight to the agent; the prompt contains the commands below with the instance's address filled in. Otherwise, open the instance's apps address and copy the installation command, or ask its owner for it. On Linux and macOS the commands look like this (replace `apps.example.com` with your instance):
 
 ```sh
 curl -fsSL --retry 3 --retry-all-errors https://apps.example.com/install.sh | sh
