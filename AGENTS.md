@@ -59,3 +59,5 @@
 
 - `kb/plans/2026-11-02-tinyhost.md` — 总 plan：概念、URL、权限、安全决策、分期。实现任何一期之前，先读它和那一期的 spec。
 - `docs/json-output.md` — HTTP API 与 `--json` 的输出契约，字段只增不改。
+- `README.md` — 写给使用者的英文说明：安装、授权、发布、自部署和信任边界。开发约定、发布和验收记录放 AGENTS.md 或 kb 文档。用户能感知到的行为变了，要同步改 README。截图在 `docs/screenshots/`，三组都有深浅两版；改图后用 gh-markdown-preview 核对主题和宽度，用户确认预览后才提交、push。
+- `SECURITY.md` — 安全模型和私下报告渠道：通过维护者 GitHub 主页联系，仓库没有开启 private vulnerability reporting。

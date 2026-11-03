@@ -130,11 +130,11 @@ tags:
 - [x] tinyhost 仓库：`make dist`、ci.yml、release.yml、Dockerfile；先用 `v0.1.0-rc.1` 打一次，检查产物命名（2026-11-02 `167a9d1`；仓库一开始就公开，MIT 许可证随首次推送加入，见 `kb/sessions/2026-11-02-th-m4-release.md`）
 - [x] **上线前核实**：reorx.com zone 的 Bot Fight Mode 状态；CF 缓存规则（`private` 和 `no-cache` 的响应不能被边缘缓存）；列出 reorx.com 下用 cookie 会话的服务，逐个确认 CSRF 防护（2026-11-02：核实结果让用户决定 apps 改用独立注册域名，记录在 deploy 仓库 `kb/docs/tinyhost.md`；两个主机都加了 bypass 缓存规则）
 - [x] deploy 仓库：`tinyhost` role、group_vars、Caddy 站点、DNS 记录，`--limit ali-hk-01 --tags tinyhost` 下发（2026-11-02 改为下发到 tc-sg-01，DNS 由用户添加）
-- [ ] 服务器上设置密码、填 ntfy token、重启；从外网 curl 验证两个域名（curl 验证已完成；密码和 token 等用户设置）
+- [x] 服务器上设置密码、填 ntfy token、重启；从外网 curl 验证两个域名（2026-11-03 用户设好，ntfy 网页收到 tinyhost 话题的测试消息）
 - [x] backup role 的 tinyhost 任务，手动触发一次并确认 OSS 上有文件（2026-11-02，空实例；带数据的备份在恢复演练里再做一次）
 - [x] 恢复演练（验收 6）（2026-11-02 先在 systemd 布局上演练两次，迁到 compose 后又演练一次，3 个测试 App 的内容 hash 全部一致；SOP 在 deploy 仓库 `kb/docs/tinyhost.md`）
-- [ ] 真实 Agent 端到端验收（验收 3–5），截图存到 `tmp/<日期>-m4-production-e2e/`
-- [ ] README、LICENSE、SECURITY.md；**公开仓库前请用户确认**
+- [x] 真实 Agent 端到端验收（验收 3–5），截图存到 `tmp/<日期>-m4-production-e2e/`（2026-11-03 改用本机两个 Claude Code（sonnet）当被测 Agent，因为 ChatGPT 没额度、Grok 没装：A 只拿到安装命令，就完成了授权、预览，并发布了私有看板；B 用自己的身份推数据。用户用手机登录后看到了带数据的看板。机房 IP 能否访问，由 GitHub Actions runner 上的安装验收覆盖）
+- [x] README、LICENSE、SECURITY.md；**公开仓库前请用户确认**（2026-11-03 `ed1d160`；用户确认过 README 预览；安全问题通过维护者 GitHub 主页私下报告，没有开启 private vulnerability reporting）
 - [ ] 打正式版 `v0.1.0` tag，更新 deploy 仓库的版本号
 - [ ] deploy 仓库文档；tinyhost 仓库更新 `AGENTS.md`
 
