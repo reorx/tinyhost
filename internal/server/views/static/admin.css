@@ -177,6 +177,7 @@ time, .nowrap, .count, .ver { font-variant-numeric: tabular-nums; }
 
 .split { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 32px; align-items: start; }
 .split > aside { position: sticky; top: 80px; }
+.split > aside.aside-stack { position: static; display: grid; gap: 16px; }
 .split-even { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 32px; }
 
 .section { margin-top: 44px; }
@@ -190,6 +191,17 @@ time, .nowrap, .count, .ver { font-variant-numeric: tabular-nums; }
 }
 .panel > h2 { margin-bottom: 6px; }
 .panel > .hint { margin-bottom: 16px; }
+
+.hint-warn { color: var(--warn); }
+.panel .stack > .btn { width: 100%; }
+.quickstart-full > summary { cursor: pointer; color: var(--accent-text); font-size: 0.875rem; padding: 4px 0; }
+.quickstart-full[open] > summary { margin-bottom: 8px; }
+.quickstart {
+  margin: 0; padding: 10px 12px; max-height: 360px; overflow: auto;
+  background: var(--surface-2); border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
+  font-family: var(--mono, ui-monospace, monospace); font-size: 0.75rem; line-height: 1.55; color: var(--text);
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
 
 .crumbs { display: flex; gap: 8px; color: var(--text-3); font-size: 0.875rem; margin-bottom: 10px; }
 .crumbs a { color: var(--text-2); }

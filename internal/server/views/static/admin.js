@@ -56,6 +56,27 @@ if (navigator.clipboard) {
   });
 }
 
+// The quickstart text comes from the server; here only the Agent name is filled in.
+const quickstartText = document.querySelector('[data-quickstart-text]');
+if (quickstartText && navigator.clipboard) {
+  const nameField = document.querySelector('[data-quickstart-name]');
+  const nameInput = nameField.querySelector('input');
+  const invalid = nameField.querySelector('[data-quickstart-invalid]');
+  const copyButton = document.querySelector('[data-quickstart-copy]');
+  const namePattern = /^[A-Za-z0-9._@-]{1,64}$/;
+  nameField.hidden = false;
+  nameInput.addEventListener('input', function () {
+    const name = nameInput.value.trim();
+    const valid = name === '' || namePattern.test(name);
+    invalid.hidden = valid;
+    const text = name !== '' && valid
+      ? quickstartText.getAttribute('data-named').split(quickstartText.getAttribute('data-placeholder')).join(name)
+      : quickstartText.getAttribute('data-default');
+    quickstartText.textContent = text;
+    copyButton.setAttribute('data-copy', text);
+  });
+}
+
 // "Back" buttons on error pages appear only when there is a page to go back to.
 if (window.history.length > 1) {
   document.querySelectorAll('[data-back]').forEach(function (button) {

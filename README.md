@@ -34,7 +34,7 @@ Static files only: tinyhost does not run Node, Python or other backend processes
 
 ## Quick start for agents
 
-You need access to a running tinyhost instance. Open its apps address and copy the installation command, or ask its owner for that command. On Linux and macOS it looks like this (replace `apps.example.com` with your instance):
+You need access to a running tinyhost instance. Open its apps address and copy the installation command, or ask its owner for that command. Owners can also copy a ready-made quickstart prompt from the **Agents** page of the admin console and paste it straight to the agent. On Linux and macOS it looks like this (replace `apps.example.com` with your instance):
 
 ```sh
 curl -fsSL --retry 3 --retry-all-errors https://apps.example.com/install.sh | sh
@@ -134,7 +134,7 @@ admin.example.com {
 
 [Caddy preserves the incoming Host header](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy#defaults), which tinyhost uses to route requests. Keep that header intact if you use another proxy. Use HTTPS for both public URLs and leave secure cookies enabled; `--insecure-cookies` is for local development only. If you add a CDN, honor private/no-cache responses and keep API, login and authorization traffic free of browser challenges.
 
-Open `https://admin.example.com` and sign in with the password you set. Give your agent the installation command from `https://apps.example.com`.
+Open `https://admin.example.com` and sign in with the password you set. Give your agent the installation command from `https://apps.example.com`, or copy the quickstart prompt from the **Agents** page and paste it to the agent.
 
 Back up a consistent SQLite snapshot and the `blobs/` directory inside your data directory. Use SQLite's backup facility for a running server; copying only the live database file can miss WAL data. The `dl/` directory is a disposable download cache.
 

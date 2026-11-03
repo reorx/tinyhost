@@ -1,0 +1,13 @@
+Set up tinyhost so you can publish web pages to {{SERVER}}.
+
+1. Install the CLI (macOS/Linux):
+   {{INSTALL}}
+   If curl rejects --retry-all-errors, drop that option and rerun.
+   Follow any PATH instruction the installer prints.
+2. Run `tinyhost skill` and read all of it; it is the full usage guide.
+   If you support skills, save its output as a skill named tinyhost.
+3. {{PICK}}Run: tinyhost login --name "{{NAME}}" --wait 120
+   Send me the approval link and verification code exactly as printed,
+   then wait. If it exits before I approve, run `tinyhost login` again
+   to keep waiting on the same request.
+4. After I approve, run `tinyhost whoami` to confirm.

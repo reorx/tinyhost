@@ -11,6 +11,8 @@ import (
 	"github.com/reorx/tinyhost/internal/slug"
 	"github.com/reorx/tinyhost/internal/store"
 	"github.com/reorx/tinyhost/internal/token"
+	"github.com/reorx/tinyhost/internal/version"
+	"github.com/reorx/tinyhost/skill"
 )
 
 type AppRow struct {
@@ -48,6 +50,10 @@ type AgentsView struct {
 	Agents            []AgentRow
 	Token, IssuedName string
 	ExpiresAt         *int64
+	// Quickstart is what the Owner pastes to an Agent. JS fills the name into
+	// QuickstartNamed at QuickstartPlaceholder, so there is one copy of the text.
+	Quickstart, QuickstartNamed, QuickstartPlaceholder string
+	InstallUnavailable                                 bool
 }
 type EventsView struct {
 	Events    []store.AuditEvent
@@ -311,13 +317,22 @@ func (s *Server) agentRows() ([]AgentRow, error) {
 	}
 	return rows, nil
 }
+func (s *Server) agentsView(rows []AgentRow) AgentsView {
+	return AgentsView{
+		Agents:                rows,
+		Quickstart:            skill.Quickstart(s.Config.AppsURL, ""),
+		QuickstartNamed:       skill.Quickstart(s.Config.AppsURL, skill.QuickstartNamePlaceholder),
+		QuickstartPlaceholder: skill.QuickstartNamePlaceholder,
+		InstallUnavailable:    !skill.InstallAvailable(version.Version, s.Config.DLDir != ""),
+	}
+}
 func (s *Server) consoleAgents(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.agentRows()
 	if err != nil {
 		s.adminInternal(w, err)
 		return
 	}
-	s.render(w, "agents.html", AgentsView{Agents: rows})
+	s.render(w, "agents.html", s.agentsView(rows))
 }
 func (s *Server) consoleIssueToken(w http.ResponseWriter, r *http.Request) {
 	if !s.consoleForm(w, r) {
@@ -356,7 +371,9 @@ func (s *Server) consoleIssueToken(w http.ResponseWriter, r *http.Request) {
 		s.adminInternal(w, err)
 		return
 	}
-	s.render(w, "agents.html", AgentsView{Agents: rows, Token: plain, IssuedName: c.Name, ExpiresAt: expires})
+	view := s.agentsView(rows)
+	view.Token, view.IssuedName, view.ExpiresAt = plain, c.Name, expires
+	s.render(w, "agents.html", view)
 }
 func (s *Server) consoleRevokeAgent(w http.ResponseWriter, r *http.Request) {
 	clients, err := s.Store.Clients()

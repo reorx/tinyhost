@@ -32,11 +32,29 @@
           <td class="full row-actions">{{if not .RevokedAt}}<form action="/agents/{{.ID}}/revoke" method="post" data-confirm="撤销 {{.Name}}？它的下一个请求就会失败，需要重新 tinyhost login。"><button class="btn btn-sm btn-danger">撤销</button></form>{{end}}</td>
         </tr>{{else}}<tr><td class="empty" colspan="6">
           <p>还没有 Agent。</p>
-          <p class="muted">让 Agent 运行 <code>tinyhost login</code>，把它给你的链接打开批准；或者在右边手动签发 token。</p>
+          <p class="muted">用右边的「接入新 Agent」复制指示给 Agent，把它发回的链接打开批准；或者手动签发 token。</p>
         </td></tr>{{end}}</tbody>
       </table></div>
     </section>
-    <aside class="panel" aria-labelledby="issue-title">
+    <aside class="aside-stack">
+    <section class="panel" aria-labelledby="quickstart-title">
+      <h2 id="quickstart-title">接入新 Agent</h2>
+      <p class="hint">复制下面的指示，粘贴给新环境里的 Agent。它会安装 CLI、阅读使用说明，然后把批准链接发给你，打开链接批准即可。</p>
+      {{if .InstallUnavailable}}<p class="hint hint-warn" data-install-unavailable>这台服务器是开发版本，又没有配置 <code>--dl-dir</code>，指示里的安装命令会失败。</p>{{end}}
+      <div class="stack">
+        <div class="field" data-quickstart-name hidden>
+          <label for="quickstart-name">名称（可选）</label>
+          <input class="input" id="quickstart-name" maxlength="64" autocomplete="off" placeholder="留空让 Agent 自己起名">
+          <p class="hint" data-quickstart-invalid hidden>名称只能包含字母、数字和 . _ @ -，最长 64 个字符。</p>
+        </div>
+        <button type="button" class="btn btn-primary" data-copy="{{.Quickstart}}" data-quickstart-copy hidden>复制 quickstart 指示</button>
+        <details class="quickstart-full">
+          <summary>查看全文</summary>
+          <pre class="quickstart" data-quickstart-text data-default="{{.Quickstart}}" data-named="{{.QuickstartNamed}}" data-placeholder="{{.QuickstartPlaceholder}}">{{.Quickstart}}</pre>
+        </details>
+      </div>
+    </section>
+    <section class="panel" aria-labelledby="issue-title">
       <h2 id="issue-title">手动签发 token</h2>
       <p class="hint">用于每次都是全新容器的云端环境。token 只显示一次，配进 Agent 环境的 <code>TINYHOST_TOKEN</code> 环境变量。</p>
       <form class="stack" action="/agents" method="post">
@@ -54,6 +72,7 @@
         </fieldset>
         <button class="btn btn-primary">签发 token</button>
       </form>
+    </section>
     </aside>
   </div>
 </main>

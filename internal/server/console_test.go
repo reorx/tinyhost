@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"html"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/reorx/tinyhost/internal/api"
 	"github.com/reorx/tinyhost/internal/token"
+	"github.com/reorx/tinyhost/skill"
 )
 
 func consolePost(t *testing.T, f *fixture, c *http.Cookie, path, form string, status int) string {
@@ -219,4 +221,49 @@ func TestConsoleManualTokenAndAgentStates(t *testing.T) {
 	consolePost(t, f, c, "/agents", "name=x&ttl=bad", 400)
 	consolePost(t, f, c, "/agents", "name=&ttl=1d", 400)
 	consolePost(t, f, c, "/agents/missing/revoke", "", 404)
+}
+
+// Behavior: the Agents page offers a quickstart panel with the instance's real apps address in both the default and the named text.
+func TestAgentsPageHasQuickstartPanel(t *testing.T) {
+	f := setup(t)
+	c := adminCookie(t, f)
+	page := consolePage(t, f, c, "/agents",
+		html.EscapeString(skill.Quickstart("http://apps.test", "")),
+		html.EscapeString(skill.Quickstart("http://apps.test", skill.QuickstartNamePlaceholder)),
+		`data-placeholder="`+skill.QuickstartNamePlaceholder+`"`,
+		"http://apps.test/install.sh",
+	)
+	if strings.Contains(page, "example.com") || strings.Contains(page, "style=") || strings.Contains(page, "<style") {
+		t.Fatal(page)
+	}
+	if strings.Index(page, "quickstart-title") > strings.Index(page, "issue-title") {
+		t.Fatal("quickstart panel must come before the manual token panel")
+	}
+}
+
+// Behavior: after issuing a token by hand, the one-time token and the quickstart panel are on the same page.
+func TestIssuedTokenPageKeepsQuickstartPanel(t *testing.T) {
+	f := setup(t)
+	c := adminCookie(t, f)
+	body := consolePost(t, f, c, "/agents", "name=manual&ttl=1d", 200)
+	if !regexp.MustCompile(`th_[A-Za-z0-9_-]{43}`).MatchString(body) {
+		t.Fatal(body)
+	}
+	if !strings.Contains(body, html.EscapeString(skill.Quickstart("http://apps.test", ""))) {
+		t.Fatal(body)
+	}
+}
+
+// Behavior: the dev-build warning shows only while the server has no local install packages.
+func TestAgentsPageWarnsWhenInstallUnavailable(t *testing.T) {
+	f := setup(t)
+	c := adminCookie(t, f)
+	const warning = "data-install-unavailable"
+	if page := consolePage(t, f, c, "/agents"); !strings.Contains(page, warning) {
+		t.Fatal("dev build without DLDir must warn")
+	}
+	f.s.Config.DLDir = t.TempDir()
+	if page := consolePage(t, f, c, "/agents"); strings.Contains(page, warning) {
+		t.Fatal("DLDir configured, warning must go away")
+	}
 }
