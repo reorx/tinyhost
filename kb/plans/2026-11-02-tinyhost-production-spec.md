@@ -135,8 +135,8 @@ tags:
 - [x] 恢复演练（验收 6）（2026-11-02 先在 systemd 布局上演练两次，迁到 compose 后又演练一次，3 个测试 App 的内容 hash 全部一致；SOP 在 deploy 仓库 `kb/docs/tinyhost.md`）
 - [x] 真实 Agent 端到端验收（验收 3–5），截图存到 `tmp/<日期>-m4-production-e2e/`（2026-11-03 改用本机两个 Claude Code（sonnet）当被测 Agent，因为 ChatGPT 没额度、Grok 没装：A 只拿到安装命令，就完成了授权、预览，并发布了私有看板；B 用自己的身份推数据。用户用手机登录后看到了带数据的看板。机房 IP 能否访问，由 GitHub Actions runner 上的安装验收覆盖）
 - [x] README、LICENSE、SECURITY.md；**公开仓库前请用户确认**（2026-11-03 `ed1d160`；用户确认过 README 预览；安全问题通过维护者 GitHub 主页私下报告，没有开启 private vulnerability reporting）
-- [ ] 打正式版 `v0.1.0` tag，更新 deploy 仓库的版本号
-- [ ] deploy 仓库文档；tinyhost 仓库更新 `AGENTS.md`
+- [x] 打正式版 `v0.1.0` tag，更新 deploy 仓库的版本号（2026-11-03：tag 指向 `d4d046e`，Release 和镜像 `0.1.0`/`latest` 已发布；自部署验收（验收 7）的 binary、container 两种方式都通过，没覆盖 Caddy + HTTPS 那一节；线上已升到 0.1.0，见 `kb/sessions/2026-11-03-th-m4-final.md`）
+- [x] deploy 仓库文档；tinyhost 仓库更新 `AGENTS.md`（2026-11-03）
 
 ### 测试与验证
 
