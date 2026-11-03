@@ -41,7 +41,7 @@ jobs:
           curl -fLO "https://github.com/reorx/tinyhost/releases/download/v${VERSION}/checksums.txt"
           sha256sum --ignore-missing -c checksums.txt
           tar -xzf "tinyhost-server_${VERSION}_linux_amd64.tar.gz"
-          test "$(./tinyhost-server version)" =
+          test "$(./tinyhost-server version)" = "$VERSION"
       - name: Set the password and start the server
         run: |
           cd "$RUNNER_TEMP/selfhost"
