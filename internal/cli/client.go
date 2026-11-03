@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -16,6 +17,23 @@ import (
 )
 
 var errServerNotConfigured = usage("请用 --server、TINYHOST_SERVER 或 config.json 设置服务器地址")
+
+// retryDelays spaces the extra attempts of a read-only request.
+var retryDelays = []time.Duration{time.Second, 2 * time.Second}
+
+// gatewayFailure reports a CDN that could not reach the server (52x, 502-504)
+// or a failed connection. Client timeouts are not retried: they already waited.
+func gatewayFailure(response *http.Response, err error) bool {
+	if err != nil {
+		var netErr net.Error
+		return !errors.As(err, &netErr) || !netErr.Timeout()
+	}
+	switch response.StatusCode {
+	case 502, 503, 504, 520, 521, 522, 523, 524:
+		return true
+	}
+	return false
+}
 
 func (c *context) serverURL() (string, error) {
 	raw := c.server
@@ -84,6 +102,18 @@ func (c *context) httpRequest(method, path string, query url.Values, body io.Rea
 	}
 	client := &http.Client{Timeout: timeout, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	response, err := client.Do(req)
+	// Read-only requests ride out a CDN that briefly cannot reach the server.
+	// Writes are never repeated: the first attempt may already have applied.
+	for _, delay := range retryDelays {
+		if method != "GET" || !gatewayFailure(response, err) {
+			break
+		}
+		if err == nil {
+			response.Body.Close()
+		}
+		time.Sleep(delay)
+		response, err = client.Do(req)
+	}
 	if err != nil {
 		return err
 	}

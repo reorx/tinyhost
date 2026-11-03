@@ -13,16 +13,20 @@ import (
 	"golang.org/x/term"
 )
 
-func init() { register(&command{name: "passwd", run: passwd}) }
+func init() {
+	register(&command{name: "passwd", summary: "设置后台的 Owner 密码，并让所有后台会话失效", run: passwd})
+}
+
+const passwdUsage = `用法：tinyhost-server passwd [--data-dir DIR]
+
+设置后台的 Owner 密码，并让所有后台会话失效。在终端里会要求输入两次；
+不是终端时从标准输入读一行。`
+
 func passwd(args []string, out io.Writer) error {
 	fs := flag.NewFlagSet("passwd", flag.ContinueOnError)
-	fs.SetOutput(io.Discard)
-	dir := fs.String("data-dir", env("DATA_DIR", "./data"), "")
-	if err := fs.Parse(args); err != nil {
+	dir := fs.String("data-dir", "./data", "数据目录，和 serve 的 --data-dir 相同")
+	if err := parseFlags(fs, args, out, passwdUsage); err != nil {
 		return err
-	}
-	if fs.NArg() != 0 {
-		return fmt.Errorf("passwd accepts no positional arguments")
 	}
 	password, err := readPassword(out)
 	if err != nil {

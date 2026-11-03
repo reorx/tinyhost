@@ -134,6 +134,11 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /_/api/v1/apps/{slug}/promote", s.auth(s.promote))
 	mux.HandleFunc("DELETE /_/api/v1/apps/{slug}", s.auth(s.deleteApp))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Container health probes are periodic; keep them out of the request log.
+		if r.URL.Path == "/_/health" {
+			s.health(w, r)
+			return
+		}
 		start := time.Now()
 		logw := &responseLog{ResponseWriter: w}
 		state := &requestState{}

@@ -153,7 +153,7 @@ func TestDistributionAndNotificationFlags(t *testing.T) {
 	t.Setenv("TINYHOST_NOTIFY_EVENTS", "app.deleted")
 	var c server.Config
 	var n notify.Config
-	dir, _, err := flags("serve", []string{"--data-dir", t.TempDir(), "--release-repo", "owner/custom", "--dl-dir", "dist", "--ntfy-url", "http://override.test/topic", "--ntfy-token", "secret", "--webhook-url", "http://hook.test"}, &c, &n)
+	dir, _, err := flags("serve", serveUsage, []string{"--data-dir", t.TempDir(), "--release-repo", "owner/custom", "--dl-dir", "dist", "--ntfy-url", "http://override.test/topic", "--ntfy-token", "secret", "--webhook-url", "http://hook.test"}, io.Discard, &c, &n)
 	if err != nil || c.ReleaseRepo != "owner/custom" || c.DLDir != "dist" || n.NtfyURL != "http://override.test/topic" || n.NtfyToken != "secret" || n.WebhookURL != "http://hook.test" || n.Events != "app.deleted" {
 		t.Fatal(c, n, err)
 	}

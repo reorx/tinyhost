@@ -12,12 +12,12 @@ tinyhost hosts static HTML, CSS, JavaScript, images and JSON. It does not run ba
 ## Install and authorize
 
 ```sh
-curl -fsSL {{SERVER}}/install.sh | sh
+curl -fsSL --retry 3 --retry-all-errors {{SERVER}}/install.sh | sh
 tinyhost skill
 tinyhost login --name "my-agent" --wait 60
 ```
 
-Installation writes the server to the platform config directory. If `~/.local/bin` is outside PATH, follow the installer's PATH instruction. Re-run the installer to upgrade. Server precedence: `--server URL` > `TINYHOST_SERVER` > config.json. Use `--server {{SERVER}}` to select this server explicitly.
+The retry options ride out brief CDN errors (52x) and dropped connections; the installer retries its own downloads. `--retry-all-errors` needs curl 7.71 or newer: if curl reports it as unknown, drop it and run the line again. Installation writes the server to the platform config directory. If `~/.local/bin` is outside PATH, follow the installer's PATH instruction. Re-run the installer to upgrade. Server precedence: `--server URL` > `TINYHOST_SERVER` > config.json. Use `--server {{SERVER}}` to select this server explicitly.
 
 Send the **exact approval link and verification code** printed by login to the user. Wait for the user to approve on the admin domain. Owner passwords belong only on that admin domain. Never send device codes, tokens, credentials.json or pending-login.json to the user or commit them. Exit 4 means approval is pending: run `tinyhost login` again to continue the same request; `--wait 120` extends the wait. Expired or rejected requests are cleared; retry login to create a new one. `--force` requests a fresh authorization even if already signed in.
 
@@ -102,7 +102,7 @@ curl -fsS -H "Authorization: Bearer $TINYHOST_TOKEN" \
   '{{SERVER}}/_/api/v1/apps/sales-report/deploys?create=1'
 ```
 
-Omit `?create=1` for an existing App; use `visibility=public` only when deliberately creating a public App. Agent APIs accept Bearer tokens, never browser cookies.
+Omit `?create=1` for an existing App; use `visibility=public` only when deliberately creating a public App. Agent APIs accept Bearer tokens, never browser cookies. Do not add retry options to uploads: after a 52x or dropped connection, check the App's versions before uploading again. The CLI retries only read-only requests.
 
 ## Common errors
 

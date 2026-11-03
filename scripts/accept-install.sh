@@ -11,7 +11,8 @@ home_dir="$work/home"
 if [ -e "$home_dir" ]; then echo "验收 HOME 必须全新：$home_dir" >&2; exit 1; fi
 mkdir "$home_dir"
 # Clean child environment: no TINYHOST_SERVER/TOKEN/INSTALL_DIR, no real config.
-env -i HOME="$home_dir" PATH="$PATH" sh -c 'curl -fsSL "$1/install.sh" | sh' sh "${server%/}"
+# Same install command as the skill, including its retries for CDN 52x.
+env -i HOME="$home_dir" PATH="$PATH" sh -c 'curl -fsSL --retry 3 --retry-all-errors "$1/install.sh" | sh' sh "${server%/}"
 cli="$home_dir/.local/bin/tinyhost"
 # The pipe hides a failed download (for example a Cloudflare 52x): sh just reads nothing.
 if [ ! -x "$cli" ]; then echo "安装失败：没有生成 ${cli}，见上面 curl 或 install.sh 的输出" >&2; exit 1; fi
@@ -24,7 +25,7 @@ server_version=$(awk 'tolower($1) == "x-tinyhost-version:" {print $2}' "$work/wh
 if [ "$server_version" != "$expected" ]; then echo "服务器版本不一致：X-Tinyhost-Version=${server_version:-缺失} != $expected" >&2; exit 1; fi
 printf 'PASS server X-Tinyhost-Version=%s\n' "$server_version"
 env -i HOME="$home_dir" PATH="$PATH" "$cli" skill > "$work/cli-skill.md"
-curl -fsSL "${server%/}/skill.md" > "$work/http-skill.md"
+curl -fsSL --retry 3 --retry-all-errors "${server%/}/skill.md" > "$work/http-skill.md"
 diff -u "$work/http-skill.md" "$work/cli-skill.md"
 printf 'PASS skill HTTP/CLI identical\n'
 set +e

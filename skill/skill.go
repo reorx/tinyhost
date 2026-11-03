@@ -21,6 +21,12 @@ func Render(server string) string {
 	}
 	return strings.NewReplacer("{{SERVER}}", strings.TrimRight(server, "/"), "{{VERSION}}", version.Version).Replace(Text)
 }
+
+// InstallCommand is the documented way to install the CLI from server. curl
+// retries CDN 52x and dropped connections; install.sh only runs once complete.
+func InstallCommand(server string) string {
+	return "curl -fsSL --retry 3 --retry-all-errors " + strings.TrimRight(server, "/") + "/install.sh | sh"
+}
 func shellQuote(s string) string { return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'" }
 func RenderInstall(server, build string, local bool) string {
 	if build == "dev" && !local {

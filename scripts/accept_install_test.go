@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 )
 
@@ -25,10 +26,18 @@ EOF
 chmod +x "$HOME/.local/bin/tinyhost"
 `
 
+// acceptanceServer simulates a server reporting serverVersion. "flaky" is a
+// healthy 1.2.3 server whose first install.sh response is a Cloudflare 522;
+// "origin-down" never serves install.sh.
 func acceptanceServer(serverVersion string) *httptest.Server {
+	var installRequests atomic.Int64
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/install.sh":
+			if serverVersion == "flaky" && installRequests.Add(1) == 1 {
+				w.WriteHeader(522)
+				return
+			}
 			if serverVersion == "origin-down" {
 				// What Cloudflare returns when it cannot reach the origin.
 				w.WriteHeader(522)
@@ -38,7 +47,9 @@ func acceptanceServer(serverVersion string) *httptest.Server {
 		case "/skill.md":
 			_, _ = w.Write([]byte("skill text\n"))
 		case "/_/api/v1/whoami":
-			if serverVersion != "" {
+			if serverVersion == "flaky" {
+				w.Header().Set("X-Tinyhost-Version", "1.2.3")
+			} else if serverVersion != "" {
 				w.Header().Set("X-Tinyhost-Version", serverVersion)
 			}
 			w.Header().Set("Content-Type", "application/json")
@@ -103,5 +114,15 @@ func TestInstallAcceptanceReportsInstallFailureWhenInstallScriptDownloadFails(t 
 	}
 	if strings.Contains(out, "No such file") {
 		t.Errorf("acceptance ran the missing CLI instead of stopping:\n%s", out)
+	}
+}
+
+// Behavior: install acceptance installs through the same retrying command as the skill, so one transient 522 on install.sh does not fail it.
+func TestInstallAcceptanceRetriesTransientInstallScriptFailure(t *testing.T) {
+	srv := acceptanceServer("flaky")
+	defer srv.Close()
+	out, err := runAcceptance(t, srv.URL)
+	if err != nil || !strings.Contains(out, "PASS login created authorization") {
+		t.Fatalf("acceptance failed after one 522: %v\n%s", err, out)
 	}
 }

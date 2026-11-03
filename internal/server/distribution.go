@@ -44,7 +44,7 @@ func (s *Server) distribution(w http.ResponseWriter, r *http.Request, downloads 
 		w.Header().Set("Content-Security-Policy", trustedAppsPageCSP)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		if r.Method != "HEAD" {
-			s.render(w, "root.html", RootView{AppsURL: strings.TrimRight(s.Config.AppsURL, "/"), Version: version.Version, InstallCommand: "curl -fsSL " + strings.TrimRight(s.Config.AppsURL, "/") + "/install.sh | sh"})
+			s.render(w, "root.html", RootView{AppsURL: strings.TrimRight(s.Config.AppsURL, "/"), Version: version.Version, InstallCommand: skill.InstallCommand(s.Config.AppsURL)})
 		}
 	case "/skill.md":
 		w.Header().Set("Content-Type", "text/markdown; charset=utf-8")

@@ -73,3 +73,28 @@ jobs:
             actual=$(docker run --rm --platform "linux/$arch" "ghcr.io/reorx/tinyhost-server:$VERSION" version)
             test "$actual" = "$VERSION"
           done
+      # A plain `docker run -v NAME:/data` must work as nonroot and turn healthy.
+      - name: Verify nonroot user, fresh named volume and healthcheck on both architectures
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          image="ghcr.io/reorx/tinyhost-server:$VERSION"
+          test "$(docker image inspect --format '{{.Config.User}}' "$image")" = 65532:65532
+          docker image inspect --format '{{json .Config.Healthcheck.Test}}' "$image" | grep -F '"/tinyhost-server","healthcheck"'
+          for arch in amd64 arm64; do
+            name="verify-$arch"
+            docker run -d --name "$name" --platform "linux/$arch" -v "$name:/data" \
+              -e TINYHOST_APPS_URL=http://apps.test -e TINYHOST_ADMIN_URL=http://admin.test "$image"
+            status=starting
+            for _ in $(seq 60); do
+              status=$(docker inspect --format '{{.State.Health.Status}}' "$name")
+              if [ "$status" = healthy ] || [ "$(docker inspect --format '{{.State.Running}}' "$name")" != true ]; then break; fi
+              sleep 2
+            done
+            docker logs "$name"
+            echo "$arch health: $status"
+            test "$status" = healthy
+            docker exec "$name" /tinyhost-server token create --name release-verify --data-dir /data > /dev/null
+            docker rm -f "$name"
+            docker volume rm "$name"
+          done

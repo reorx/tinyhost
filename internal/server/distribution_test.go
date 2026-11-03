@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"html"
 	"net/http"
 	"strings"
 	"testing"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/reorx/tinyhost/internal/cli"
 	"github.com/reorx/tinyhost/internal/version"
+	"github.com/reorx/tinyhost/skill"
 )
 
 // Behavior: HTTP skill and the CLI render the same embedded instructions for the configured server.
@@ -59,6 +61,21 @@ func TestRootExplainsInstallationAndSkill(t *testing.T) {
 	_, body, _ = f.request("HEAD", "/", "", nil)
 	if len(body) != 0 {
 		t.Fatal("HEAD body")
+	}
+}
+
+// Behavior: the service root shows the skill's install command, which retries CDN failures.
+func TestRootInstallCommandMatchesSkillAndRetries(t *testing.T) {
+	f := setup(t)
+	_, body, _ := f.request("GET", "/", "", nil)
+	var command string
+	for _, line := range strings.Split(skill.Render(f.s.Config.AppsURL), "\n") {
+		if strings.HasPrefix(line, "curl ") && strings.Contains(line, "/install.sh") {
+			command = line
+		}
+	}
+	if !strings.Contains(command, "--retry") || !strings.Contains(string(body), "<code>"+html.EscapeString(command)+"</code>") {
+		t.Fatalf("skill: %q\nroot: %s", command, body)
 	}
 }
 

@@ -3,6 +3,7 @@
 package store
 
 import (
+	"context"
 	"database/sql"
 	_ "embed"
 	"errors"
@@ -275,4 +276,11 @@ func (s *Store) AddEvent(actor, action, app, detail string) error {
 	_, err := s.db.Exec("INSERT INTO events(at,actor,action,app_id,detail) VALUES(?,?,?,?,?)",
 		s.now().Unix(), actor, action, app, detail)
 	return err
+}
+
+// Ping reads the schema version, so health checks notice a database that can
+// no longer serve queries (closed, or its only connection stuck).
+func (s *Store) Ping(ctx context.Context) error {
+	var n int
+	return s.db.QueryRowContext(ctx, "PRAGMA user_version").Scan(&n)
 }

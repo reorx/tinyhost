@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"net/http"
 	"net/url"
+	"path"
 	"strings"
 	"time"
 
@@ -137,6 +138,12 @@ func (s *Server) adminMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		if password == "" {
+			// The setup page needs its own CSS and icons. Only canonical asset
+			// paths pass, so nothing else is reachable through the mux.
+			if (r.Method == "GET" || r.Method == "HEAD") && strings.HasPrefix(r.URL.Path, "/static/") && path.Clean(r.URL.Path) == r.URL.Path {
+				next.ServeHTTP(w, r)
+				return
+			}
 			s.render(w, "home.html", HomeView{Message: "请先在服务器上运行 tinyhost-server passwd"})
 			return
 		}
