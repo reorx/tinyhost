@@ -80,6 +80,17 @@ CSS 类：`.upload`、`.upload-options`、`.dropzone`、`.is-dragover`、`.uploa
 - `lifecycle.RLock` 从接口开始持有到提交完成，和 GC 不会交错。
 - 横幅警告：`versionPathWarnings` 读 `LayerFiles`，最多扫 200 个文件、8MiB、20 条，单个文件超过 1MiB 跳过；出错只记日志，页面照常渲染。
 
+## 发版与上线
+
+- 用户确认后发版：master CI 绿，`v0.1.2` 附注 tag 的 [Release 流水线](https://github.com/reorx/tinyhost/actions/runs/41660153743)一次绿。Release 是正式版，有 10 个资产；ghcr 镜像 `0.1.2` 有 amd64 和 arm64 两个架构。
+- 部署由 deploy 目录的执行 agent 完成（deploy 仓库 `874dc1c`）：
+  - 升级前手动备份成功。App、版本、client 的计数，以及密码哈希和 ntfy key，升级前后一致。
+  - 两个域名的 `X-Tinyhost-Version` 都是 `0.1.2`，容器 healthy。
+  - 线上 `upload.js` 已上线，不带会话 POST 上传接口返回 401。
+  - Caddy 的后台站点块加了和 apps 一样的 60MB 请求体上限。
+  - [accept-install](https://github.com/reorx/tinyhost/actions/runs/41661474547) 三平台绿，产生的 3 条授权申请没有批准，会自动过期。
+- 线上真实上传要 Owner 登录，留给用户在 `th.reorx.com` 上验：从访达拖入文件夹、上传中的进度条。
+
 ## 遗留问题
 
 - `internal/cli` 的 `TestLocalCommandsWorkWithoutCredentials` 会读开发机上真实的 CLI 配置（服务器地址），机器上装过 tinyhost CLI 就失败；用干净 `HOME` 跑才稳。不在本次范围，没改。没有达到 `kb/known-issues.md` 的记录标准（不影响应用使用），所以没新建那个文件。
