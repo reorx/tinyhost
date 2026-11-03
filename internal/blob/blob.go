@@ -44,6 +44,12 @@ func (s *Store) path(hash string) (string, error) {
 	return filepath.Join(s.root, "blobs", hash[:2], hash), nil
 }
 
+// TempFile creates an empty file in the data dir's tmp folder, which shares a
+// filesystem with blobs. The caller closes and removes it.
+func (s *Store) TempFile() (*os.File, error) {
+	return os.CreateTemp(filepath.Join(s.root, "tmp"), "upload-*")
+}
+
 func (s *Store) Put(r io.Reader) (string, int64, error) {
 	f, err := os.CreateTemp(filepath.Join(s.root, "tmp"), "blob-*")
 	if err != nil {

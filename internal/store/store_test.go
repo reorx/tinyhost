@@ -540,3 +540,22 @@ func TestIndependentStoresSerializePublishers(t *testing.T) {
 		t.Fatal(current, err)
 	}
 }
+
+// Behavior: LayerFiles lists every file of a layer ordered by path.
+func TestLayerFilesAreOrderedByPath(t *testing.T) {
+	store := openTest(t)
+	app := appTest(t, store)
+	v, err := store.CommitAppVersion(app.ID, &Layer{Files: []File{
+		{Path: "z.css", Blob: "b3", Size: 3}, {Path: "index.html", Blob: "b1", Size: 1}, {Path: "a/b.js", Blob: "b2", Size: 2},
+	}}, bundle.Manifest{}, "", "owner", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	files, err := store.LayerFiles(v.BaseLayer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) != 3 || files[0].Path != "a/b.js" || files[1].Path != "index.html" || files[2].Path != "z.css" || files[2].Blob != "b3" || files[2].Size != 3 {
+		t.Fatal(files)
+	}
+}

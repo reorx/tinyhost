@@ -171,7 +171,7 @@ func TestPrivateAppRedirectsThroughAdminAndBack(t *testing.T) {
 func TestAppPageCannotPerformControlledActions(t *testing.T) {
 	f := setup(t)
 	c := adminCookie(t, f)
-	for _, p := range []string{"/device/d_test/approve", "/apps/demo/delete", "/apps/demo/visibility"} {
+	for _, p := range []string{"/device/d_test/approve", "/apps/demo/delete", "/apps/demo/visibility", "/apps/demo/upload"} {
 		r := httptest.NewRequest("POST", "http://admin.test"+p, nil)
 		r.AddCookie(c)
 		r.AddCookie(&http.Cookie{Name: "__Host-th_view", Value: c.Value})

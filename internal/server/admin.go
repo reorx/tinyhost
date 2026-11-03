@@ -93,6 +93,8 @@ func (s *Server) adminHandler() http.Handler {
 	for _, action := range []string{"visibility", "rename", "promote", "versions/{n}/delete", "data/remove", "delete"} {
 		mux.HandleFunc("POST /apps/{slug}/"+action, s.consoleAppAction)
 	}
+	// Not in the loop above: consoleAppAction caps the body at 16KiB.
+	mux.HandleFunc("POST /apps/{slug}/upload", s.consoleUpload)
 	mux.HandleFunc("GET /trash", s.consoleTrash)
 	mux.HandleFunc("POST /trash/{id}/restore", s.consoleTrashAction)
 	mux.HandleFunc("POST /trash/{id}/purge", s.consoleTrashAction)

@@ -15,6 +15,18 @@ const ManifestLimit = 64 << 10
 
 var ErrTooLarge = errors.New("bundle exceeds limits")
 
+// ErrNoIndex is returned when a bundle that must have a root index.html has none.
+var ErrNoIndex = errors.New("bundle requires index.html")
+
+// ErrEncrypted is returned for zip archives with encrypted entries.
+var ErrEncrypted = errors.New("encrypted zip entries are not supported")
+
+// MissingIndexError is an ErrNoIndex that also names directories holding an index.html.
+type MissingIndexError struct{ Candidates []string }
+
+func (e *MissingIndexError) Error() string { return ErrNoIndex.Error() }
+func (e *MissingIndexError) Unwrap() error { return ErrNoIndex }
+
 type Manifest struct {
 	App   string            `json:"app,omitempty"`
 	Title string            `json:"title,omitempty"`
@@ -172,7 +184,7 @@ func Unpack(r io.Reader, limits Limits, sink func(string, io.Reader) error) (Sum
 		return summary, ErrTooLarge
 	}
 	if limits.RequireIndex && !index {
-		return summary, fmt.Errorf("bundle requires index.html")
+		return summary, ErrNoIndex
 	}
 	return summary, nil
 }

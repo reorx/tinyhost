@@ -1,9 +1,31 @@
 <!doctype html>
 <html lang="zh">
-<head>{{template "head" .App.Slug}}</head>
+<head>{{template "head" .App.Slug}}<script src="/static/upload.js" defer></script></head>
 <body>
 {{template "nav" "apps"}}
 <main class="page">
+  {{with .Uploaded}}
+  <section class="issued upload-result" data-upload-result aria-labelledby="uploaded-title">
+    <h2 id="uploaded-title">{{template "i-check"}}已发布 v{{.Number}}</h2>
+    <div class="secret">
+      <a class="secret-value mono" href="{{.URL}}" target="_blank" rel="noopener">{{.URL}}</a>
+      <a class="btn btn-sm" href="{{.URL}}" target="_blank" rel="noopener">打开{{template "i-external"}}</a>
+      <button type="button" class="btn btn-sm" data-copy="{{.URL}}" hidden>复制</button>
+    </div>
+    <p data-upload-promotion>{{if .Current}}主入口已切到 v{{.Number}}：<a class="mono" href="{{$.MainURL}}" target="_blank" rel="noopener">{{$.MainURL}}</a>{{else if $.App.CurrentVersion}}没有设为主入口，主入口仍是 v{{$.App.CurrentVersion}}。{{else}}没有设为主入口，还没有主入口版本。{{end}}</p>
+    {{if .PathWarnings}}
+    <div class="callout callout-warn" data-path-warnings>
+      {{template "i-alert"}}
+      <div>
+        <p class="callout-title">发现以 / 开头的绝对路径</p>
+        <p>这些资源在 <code>/{{$.App.Slug}}/</code> 下可能加载不到。改成相对路径后重新上传。</p>
+        <ul class="warn-list">{{range .PathWarnings}}<li><code>{{.File}}:{{.Line}}</code> <code>{{.Text}}</code></li>{{end}}</ul>
+      </div>
+    </div>
+    {{end}}
+    <a class="btn" href="/apps/{{$.App.Slug}}">关闭</a>
+  </section>
+  {{end}}
   <nav class="crumbs" aria-label="位置"><a href="/">App</a><span aria-hidden="true">/</span><span class="mono">{{.App.Slug}}</span></nav>
   <div class="page-head app-head">
     <div>
@@ -24,6 +46,32 @@
     <div><dt>最近更新</dt><dd><time data-ts="{{.App.UpdatedAt}}">{{.App.UpdatedAt}}</time></dd></div>
   </dl>
 
+  <section class="section upload" aria-labelledby="upload-title" data-upload data-slug="{{.App.Slug}}" data-max-bytes="{{.Upload.MaxBytes}}" data-max-files="{{.Upload.MaxFiles}}">
+    <div class="section-head"><h2 id="upload-title">上传新版本</h2></div>
+    <p class="hint" data-upload-unsupported>上传需要启用 JavaScript 的较新浏览器。</p>
+    <div data-upload-ui hidden>
+      <div class="upload-options">
+        <label class="upload-message">说明（可选）<input class="input" type="text" maxlength="1024" data-upload-message autocomplete="off"></label>
+        <label class="upload-promote"><input type="checkbox" data-upload-promote checked> 设为主入口</label>
+      </div>
+      <div class="dropzone" data-dropzone tabindex="0" role="group" aria-label="上传区域">
+        <p class="dropzone-title">把文件夹、.zip 或 .html 拖到这里</p>
+        <div class="dropzone-actions">
+          <button type="button" class="btn" data-pick-dir>选择文件夹</button>
+          <button type="button" class="btn" data-pick-file>选择 .zip / .html</button>
+        </div>
+        <input type="file" webkitdirectory hidden data-dir-input>
+        <input type="file" accept=".zip,.html,.htm" hidden data-file-input>
+        <p class="hint">最大 {{.Upload.MaxMB}} MB · {{.Upload.MaxFiles}} 个文件。页面里引用资源要用相对路径。</p>
+      </div>
+      <div class="upload-status" data-upload-status role="status" hidden>
+        <span data-upload-status-text></span>
+        <progress max="100" value="0" data-upload-progress hidden></progress>
+      </div>
+      <div class="alert alert-danger" data-upload-error role="alert" hidden></div>
+    </div>
+  </section>
+
   <section class="section" aria-labelledby="versions-title">
     <div class="section-head"><h2 id="versions-title">版本<span class="count">{{len .Versions}}</span></h2></div>
     <div class="tbl tbl-versions"><table>
@@ -41,7 +89,7 @@
         </td>
       </tr>{{else}}<tr><td class="empty" colspan="6">
         <p>还没有版本。</p>
-        <p class="muted">让 Agent 运行 <code>tinyhost deploy &lt;目录&gt; --app {{$.App.Slug}}</code> 发布第一版。</p>
+        <p class="muted">把文件夹或 .zip 拖到上面的「上传新版本」，或者让 Agent 运行 <code>tinyhost deploy &lt;目录&gt; --app {{$.App.Slug}}</code>。</p>
       </td></tr>{{end}}</tbody>
     </table></div>
   </section>

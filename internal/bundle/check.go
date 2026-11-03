@@ -15,7 +15,8 @@ type Warning struct {
 
 var absoluteReference = regexp.MustCompile("(?i)(?:(?:src|href|action|poster)\\s*=\\s*[\"']/[^/]|url\\(\\s*[\"']?/[^/]|(?:fetch|import)\\s*\\(\\s*[\"'`]/[^/]|from\\s+[\"']/[^/])")
 
-func checkable(name string) bool {
+// Checkable reports whether name is a text file CheckAbsolutePaths can scan.
+func Checkable(name string) bool {
 	switch strings.ToLower(filepath.Ext(name)) {
 	case ".html", ".htm", ".css", ".js", ".mjs":
 		return true
@@ -34,7 +35,7 @@ func CheckAbsolutePaths(files map[string][]byte) []Warning {
 	out := []Warning{}
 	for _, name := range names {
 		content := files[name]
-		if !checkable(name) || len(content) > 1<<20 {
+		if !Checkable(name) || len(content) > 1<<20 {
 			continue
 		}
 		count := 0

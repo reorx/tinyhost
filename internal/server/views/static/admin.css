@@ -411,6 +411,32 @@ a.app-link:hover .slug { text-decoration: underline; color: var(--accent-text); 
 }
 .secret-value { flex: 1; min-width: 0; background: none; padding: 0; font-size: 0.875rem; overflow-wrap: anywhere; user-select: all; }
 
+/* ---------- app page: upload ---------- */
+
+.upload-options { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin-bottom: 12px; }
+.upload-message { display: flex; flex: 1 1 280px; flex-direction: column; gap: 4px; font-size: 0.875rem; color: var(--text-2); }
+.upload-promote { display: flex; align-items: center; gap: 8px; font-size: 0.9375rem; }
+.dropzone {
+  display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 28px 16px; text-align: center;
+  background: var(--surface); border: 2px dashed var(--line-strong); border-radius: var(--radius);
+  transition: border-color 150ms ease-out, background-color 150ms ease-out;
+}
+.dropzone:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.dropzone.is-dragover { border-color: var(--accent); background: var(--accent-soft); }
+.dropzone[aria-disabled="true"] { opacity: 0.6; }
+.dropzone-title { font-weight: 550; overflow-wrap: anywhere; }
+.dropzone-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.dropzone .hint { max-width: 60ch; }
+.upload-status { display: flex; align-items: center; gap: 12px; margin-top: 12px; font-size: 0.9375rem; }
+.upload-status progress { flex: 1; max-width: 320px; height: 8px; accent-color: var(--accent); }
+.upload .alert { align-items: flex-start; overflow-wrap: anywhere; }
+.upload-result .secret { flex-wrap: wrap; }
+.upload-result .secret-value { flex: 1 1 240px; color: var(--accent-text); }
+.upload-result > p { margin-bottom: 12px; overflow-wrap: anywhere; }
+.upload-result .callout { margin: 0 0 14px; background: var(--surface); }
+.warn-list { margin: 8px 0 0; padding: 0; list-style: none; font-size: 0.8125rem; }
+.warn-list li { margin-top: 4px; overflow-wrap: anywhere; }
+
 /* ---------- events ---------- */
 
 .filter { display: flex; gap: 8px; align-items: center; }

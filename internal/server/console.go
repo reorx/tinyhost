@@ -28,6 +28,18 @@ type OverlayRow struct {
 	store.Overlay
 	PublisherName string
 }
+type UploadPanel struct {
+	MaxMB, MaxFiles int
+	MaxBytes        int64
+}
+
+// UploadedView is the result banner shown after ?uploaded=N.
+type UploadedView struct {
+	Number       int
+	URL          string
+	Current      bool
+	PathWarnings []bundle.Warning
+}
 type AppView struct {
 	App                  *store.App
 	MainURL, CreatorName string
@@ -35,6 +47,8 @@ type AppView struct {
 	Overlays             []OverlayRow
 	Manifest             bundle.Manifest
 	Events               []store.AuditEvent
+	Upload               UploadPanel
+	Uploaded             *UploadedView
 }
 type TrashRow struct {
 	*store.App
@@ -187,7 +201,35 @@ func (s *Server) consoleApp(w http.ResponseWriter, r *http.Request) {
 			view.Overlays = append(view.Overlays, OverlayRow{o, actorName(names, o.PushedBy)})
 		}
 	}
+	view.Upload = s.uploadPanel()
+	view.Uploaded = s.uploadedBanner(a, view.Versions, r.URL.Query().Get("uploaded"))
 	s.render(w, "app.html", view)
+}
+func (s *Server) uploadPanel() UploadPanel {
+	limits, _ := s.uploadLimits("")
+	return UploadPanel{MaxMB: int(limits.MaxSize >> 20), MaxFiles: limits.MaxFiles, MaxBytes: limits.MaxSize}
+}
+
+// uploadedBanner builds the banner for ?uploaded=N, or nil when N is not an
+// existing version. Scan failures only drop the warnings.
+func (s *Server) uploadedBanner(a *store.App, rows []VersionRow, param string) *UploadedView {
+	n, err := strconv.Atoi(param)
+	if err != nil || n <= 0 {
+		return nil
+	}
+	for _, row := range rows {
+		if row.Number != n {
+			continue
+		}
+		banner := &UploadedView{Number: n, URL: row.URL, Current: row.Current}
+		warnings, err := s.versionPathWarnings(row.Version)
+		if err != nil {
+			s.logger().Error("scan version for absolute paths", "error", err)
+		}
+		banner.PathWarnings = warnings
+		return banner
+	}
+	return nil
 }
 func (s *Server) consoleAppAction(w http.ResponseWriter, r *http.Request) {
 	s.lifecycle.RLock()

@@ -28,7 +28,7 @@ All names, teams and content in these screenshots are fictional demonstration da
 - **Versioned publishing.** Every App or data upload creates an immutable snapshot. Keep a stable main URL, share a version URL, or roll back.
 - **Separate code and data.** One agent can publish a dashboard while another updates its data directory, without replacing the dashboard code.
 - **Temporary previews.** Reuse a preview link while iterating; it expires automatically. Anyone with the link can view it.
-- **Owner control.** New Apps are private by default. Manage visibility, versions, agents and the recycle bin from the console.
+- **Owner control.** New Apps are private by default. Manage visibility, versions, agents and the recycle bin from the console. The Owner can also upload a folder or `.zip` on an App's page as a new version, without installing the CLI.
 
 Static files only: tinyhost does not run Node, Python or other backend processes. It is designed for one owner and trusted agents, with shared publishing access across Apps.
 

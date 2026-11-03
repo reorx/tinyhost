@@ -54,7 +54,7 @@ func (p *packer) add(src, name string, info fs.FileInfo) error {
 			return err
 		}
 	}
-	if checkable(name) && info.Size() <= 1<<20 && len(p.summary.PathWarnings) < 20 {
+	if Checkable(name) && info.Size() <= 1<<20 && len(p.summary.PathWarnings) < 20 {
 		content, err := io.ReadAll(io.LimitReader(source, (1<<20)+1))
 		if err != nil {
 			return err
@@ -166,7 +166,7 @@ func Pack(path string, options ...Options) (string, Summary, error) {
 		return "", p.summary, fmt.Errorf("empty bundle")
 	}
 	if !opt.Data && !p.index {
-		return "", p.summary, fmt.Errorf("bundle requires index.html")
+		return "", p.summary, ErrNoIndex
 	}
 	if err = tw.Close(); err != nil {
 		return "", p.summary, err

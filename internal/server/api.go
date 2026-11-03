@@ -100,28 +100,38 @@ func (s *Server) taken(w http.ResponseWriter, a *store.App) {
 		CreatedBy: a.CreatedBy, CreatedAt: &a.CreatedAt, Deleted: &deleted,
 	}})
 }
-func (s *Server) unpack(w http.ResponseWriter, r *http.Request, dir string) (*store.Layer, bundle.Summary, bool) {
+
+// uploadLimits derives bundle limits and the request body cap from Config.
+func (s *Server) uploadLimits(dir string) (bundle.Limits, int64) {
 	limits := bundle.Limits{RequireIndex: dir == "", MaxFiles: s.Config.MaxFiles}
+	if limits.MaxFiles == 0 {
+		limits.MaxFiles = 1000
+	}
 	mb := s.Config.MaxUploadMB
 	if mb == 0 {
 		mb = 50
 	}
 	limits.MaxSize = int64(mb) << 20
 	// Bound compressed bytes too; allow tar metadata and gzip overhead.
-	count := limits.MaxFiles
-	if count == 0 {
-		count = 1000
-	}
-	r.Body = http.MaxBytesReader(w, r.Body, limits.MaxSize+int64(count)*2048+(2<<20))
-	layer := &store.Layer{}
-	summary, err := bundle.Unpack(r.Body, limits, func(p string, content io.Reader) error {
+	return limits, limits.MaxSize + int64(limits.MaxFiles)*2048 + (2 << 20)
+}
+
+// layerSink stores each unpacked file as a blob and records it in layer.
+func (s *Server) layerSink(layer *store.Layer, dir string) func(string, io.Reader) error {
+	return func(p string, content io.Reader) error {
 		hash, size, err := s.Blobs.Put(content)
 		if err != nil {
 			return err
 		}
 		layer.Files = append(layer.Files, store.File{Path: dir + p, Blob: hash, Size: size})
 		return nil
-	})
+	}
+}
+func (s *Server) unpack(w http.ResponseWriter, r *http.Request, dir string) (*store.Layer, bundle.Summary, bool) {
+	limits, maxBody := s.uploadLimits(dir)
+	r.Body = http.MaxBytesReader(w, r.Body, maxBody)
+	layer := &store.Layer{}
+	summary, err := bundle.Unpack(r.Body, limits, s.layerSink(layer, dir))
 	if err != nil {
 		var maxErr *http.MaxBytesError
 		if errors.Is(err, bundle.ErrTooLarge) || errors.As(err, &maxErr) {

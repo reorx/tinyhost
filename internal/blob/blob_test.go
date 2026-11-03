@@ -122,3 +122,24 @@ func TestReadersNeverSeePartialUploads(t *testing.T) {
 		t.Fatal(count, err)
 	}
 }
+
+// Behavior: TempFile creates a writable file under the data dir's tmp folder, on the blobs filesystem.
+func TestTempFileLivesUnderDataTmp(t *testing.T) {
+	dir := t.TempDir()
+	s, err := New(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := s.TempFile()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(f.Name())
+	defer f.Close()
+	if filepath.Dir(f.Name()) != filepath.Join(dir, "tmp") || !strings.HasPrefix(filepath.Base(f.Name()), "upload-") {
+		t.Fatal(f.Name())
+	}
+	if _, err = f.WriteString("x"); err != nil {
+		t.Fatal(err)
+	}
+}

@@ -294,13 +294,13 @@ Owner 在后台 App 详情页把文件夹或 zip 拖进去（或点按钮选）�
 
 ### 实施步骤
 
-- [ ] 1. bundle：先写 `zip_test.go` 的行为测试（红），再实现 `ErrNoIndex`、`MissingIndexError`、`ErrEncrypted`、`Checkable`、`UnpackZip`。确认 `Unpack`、`Pack` 的现有测试和 CLI golden 不变。
-- [ ] 2. blob 和 store：`TempFile`、`LayerFiles`，各配一个行为测试。
-- [ ] 3. server：先写上传接口和详情页横幅的行为测试（红），再抽 `uploadLimits` / `layerSink`，实现 `upload.go`、注册路由、扩展 `AppView` 和 `consoleApp`。`go test ./...` 全绿。
-- [ ] 4. 页面：`app.html` 的上传区域、横幅、空状态文案，`admin.css`，`upload.js`。改完重新 build `tinyhost-server`。
-- [ ] 5. 本地实机验收（见「测试与验证」），截图和样例归档到 `tmp/2026-11-03-manual-upload/`。
-- [ ] 6. README 补一句；写 session 总结 `kb/sessions/2026-11-03-th-manual-upload.md`，包含「页面清单增量」：路由、请求和响应、view model 新字段、`data-*` 钩子。
-- [ ] 7. 更新 AGENTS.md 代码地图，每处一两句：
+- [x] 1. bundle：先写 `zip_test.go` 的行为测试（红），再实现 `ErrNoIndex`、`MissingIndexError`、`ErrEncrypted`、`Checkable`、`UnpackZip`。确认 `Unpack`、`Pack` 的现有测试和 CLI golden 不变。
+- [x] 2. blob 和 store：`TempFile`、`LayerFiles`，各配一个行为测试。
+- [x] 3. server：先写上传接口和详情页横幅的行为测试（红），再抽 `uploadLimits` / `layerSink`，实现 `upload.go`、注册路由、扩展 `AppView` 和 `consoleApp`。`go test ./...` 全绿。
+- [x] 4. 页面：`app.html` 的上传区域、横幅、空状态文案，`admin.css`，`upload.js`。改完重新 build `tinyhost-server`。
+- [x] 5. 本地实机验收（见「测试与验证」），截图和样例归档到 `tmp/2026-11-03-manual-upload/`。
+- [x] 6. README 补一句；写 session 总结 `kb/sessions/2026-11-03-th-manual-upload.md`，包含「页面清单增量」：路由、请求和响应、view model 新字段、`data-*` 钩子。
+- [x] 7. 更新 AGENTS.md 代码地图，每处一两句：
   - `internal/bundle`：`UnpackZip`，只用于后台上传，会去外壳、过滤 `__MACOSX` 和 `node_modules`。
   - `internal/server`：`upload.go` 是后台唯一返回 JSON 的写接口，`?uploaded=` 横幅的警告从 blob 重新计算。
   - `views`：`upload.js` 只在 `app.html` 加载。

@@ -297,6 +297,24 @@ func (s *Store) LookupFile(layer, path string) (*File, error) {
 	return &f, nil
 }
 
+// LayerFiles lists every file of a layer ordered by path.
+func (s *Store) LayerFiles(layer string) ([]File, error) {
+	rows, err := s.db.Query("SELECT path,blob,size FROM layer_files WHERE layer_id=? ORDER BY path", layer)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []File
+	for rows.Next() {
+		var f File
+		if err = rows.Scan(&f.Path, &f.Blob, &f.Size); err != nil {
+			return nil, err
+		}
+		out = append(out, f)
+	}
+	return out, rows.Err()
+}
+
 // LookupVersionFile selects an overlay before looking up the exact path;
 // absence within an overlay never falls back to the base layer.
 func (s *Store) LookupVersionFile(v *Version, path string) (*File, error) {
