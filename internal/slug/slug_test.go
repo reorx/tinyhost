@@ -42,3 +42,19 @@ func TestSegmentsResolveVersions(t *testing.T) {
 		}
 	}
 }
+
+// Behavior: a preview reference accepts only a valid app name and twelve lowercase hex digits, distinct from main and version links.
+func TestParseAppReferences(t *testing.T) {
+	for segment, want := range map[string]Ref{
+		"report": {Name: "report"}, "report@v12": {Name: "report", Version: 12}, "report@abcdef123456": {Name: "report", Preview: "abcdef123456"},
+	} {
+		if got, err := ParseRef(segment); err != nil || got != want {
+			t.Fatal(segment, got, err)
+		}
+	}
+	for _, segment := range []string{"report@ABCDEF123456", "report@abc", "api@abcdef123456", "report@v0", "report@abcdef123456@v1"} {
+		if _, err := ParseRef(segment); err == nil {
+			t.Fatal(segment)
+		}
+	}
+}

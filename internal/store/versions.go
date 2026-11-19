@@ -26,13 +26,13 @@ func activeApp(q queryer, app string) (*App, error) {
 	return a, nil
 }
 
-const versionCols = "app_id,number,kind,base_layer,manifest,data_dir,message,created_by,created_at"
+const versionCols = "app_id,number,kind,base_layer,manifest,data_dir,message,created_by,created_at,rollback_of,preview"
 
 func scanVersion(row scanner) (*Version, error) {
 	var v Version
 	var manifest string
 	err := row.Scan(&v.AppID, &v.Number, &v.Kind, &v.BaseLayer, &manifest,
-		&v.DataDir, &v.Message, &v.CreatedBy, &v.CreatedAt)
+		&v.DataDir, &v.Message, &v.CreatedBy, &v.CreatedAt, &v.RollbackOf, &v.Preview)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrVersionNotFound
 	}
@@ -102,9 +102,9 @@ func insertVersion(tx *sql.Tx, v *Version, promote bool, title *string) error {
 	if err != nil {
 		return err
 	}
-	if _, err = tx.Exec("INSERT INTO versions("+versionCols+") VALUES(?,?,?,?,?,?,?,?,?)",
+	if _, err = tx.Exec("INSERT INTO versions("+versionCols+") VALUES(?,?,?,?,?,?,?,?,?,?,?)",
 		v.AppID, v.Number, v.Kind, v.BaseLayer, string(manifest), v.DataDir,
-		v.Message, v.CreatedBy, v.CreatedAt); err != nil {
+		v.Message, v.CreatedBy, v.CreatedAt, v.RollbackOf, v.Preview); err != nil {
 		return err
 	}
 	for _, overlay := range v.Overlays {
@@ -137,18 +137,7 @@ func (s *Store) CommitAppVersion(app string, layer *Layer, manifest bundle.Manif
 		}
 		v := &Version{AppID: app, Number: a.NextVersion, Kind: "app", BaseLayer: base,
 			Manifest: manifest, Message: msg, CreatedBy: by, CreatedAt: at, Overlays: []Overlay{}}
-		if a.CurrentVersion != nil {
-			old, err := resolve(tx, a, 0)
-			if err != nil {
-				return err
-			}
-			v.Overlays = old.Overlays
-		}
-		var title *string
-		if manifest.Title != "" {
-			title = &manifest.Title
-		}
-		if err = insertVersion(tx, v, promote, title); err != nil {
+		if err = commitFromLayer(tx, a, v, promote); err != nil {
 			return err
 		}
 		out = v
@@ -326,4 +315,52 @@ func (s *Store) LookupVersionFile(v *Version, path string) (*File, error) {
 		}
 	}
 	return s.LookupFile(key, path)
+}
+
+// commitFromLayer snapshots main's overlays in the same transaction that allocates the version.
+func commitFromLayer(tx *sql.Tx, a *App, v *Version, promote bool) error {
+	if a.CurrentVersion != nil {
+		current, err := resolve(tx, a, 0)
+		if err != nil {
+			return err
+		}
+		if current.BaseLayer == v.BaseLayer {
+			return ErrAlreadyCurrent
+		}
+		v.Overlays = current.Overlays
+	}
+	var title *string
+	if v.Manifest.Title != "" {
+		title = &v.Manifest.Title
+	}
+	return insertVersion(tx, v, promote, title)
+}
+
+func (s *Store) CommitRollback(app string, n int, msg, by string) (*Version, error) {
+	var v *Version
+	err := s.write(func(tx *sql.Tx) error {
+		a, err := activeApp(tx, app)
+		if err != nil {
+			return err
+		}
+		if n <= 0 {
+			return ErrVersionNotFound
+		}
+		source, err := resolve(tx, a, n)
+		if err != nil {
+			return err
+		}
+		v = &Version{AppID: app, Number: a.NextVersion, Kind: "app", BaseLayer: source.BaseLayer,
+			Manifest: source.Manifest, Message: msg, CreatedBy: by, CreatedAt: s.now().Unix(), RollbackOf: &n}
+		return commitFromLayer(tx, a, v, true)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return v, nil
+}
+
+func (s *Store) LayerStats(id string) (files int, size int64, err error) {
+	err = s.db.QueryRow("SELECT file_count,total_size FROM layers WHERE id=?", id).Scan(&files, &size)
+	return
 }

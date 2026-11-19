@@ -37,3 +37,22 @@ func ParseSegment(seg string) (string, int, error) {
 	}
 	return name, n, nil
 }
+
+type Ref struct {
+	Name    string
+	Version int
+	Preview string
+}
+
+var previewPattern = regexp.MustCompile(`^[0-9a-f]{12}$`)
+
+func ValidPreviewHash(hash string) bool { return previewPattern.MatchString(hash) }
+
+func ParseRef(segment string) (Ref, error) {
+	name, hash, found := strings.Cut(segment, "@")
+	if found && Valid(name) && ValidPreviewHash(hash) {
+		return Ref{Name: name, Preview: hash}, nil
+	}
+	name, version, err := ParseSegment(segment)
+	return Ref{Name: name, Version: version}, err
+}

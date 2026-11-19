@@ -14,15 +14,23 @@ func (s *Server) previewURL(p *store.Preview) string {
 	return strings.TrimRight(s.Config.AppsURL, "/") + "/_p/" + p.Token + "/"
 }
 
-func (s *Server) createPreview(w http.ResponseWriter, r *http.Request) {
+func previewTTL(w http.ResponseWriter, r *http.Request) (time.Duration, bool) {
 	ttl := 24 * time.Hour
 	if raw := r.URL.Query().Get("ttl"); raw != "" {
 		var err error
 		ttl, err = time.ParseDuration(raw)
 		if err != nil || ttl < time.Hour || ttl > 168*time.Hour {
 			fail(w, 400, "invalid_ttl", "预览有效期必须在 1h–168h 之间", "使用 --ttl 24h")
-			return
+			return 0, false
 		}
+	}
+	return ttl, true
+}
+
+func (s *Server) createPreview(w http.ResponseWriter, r *http.Request) {
+	ttl, ok := previewTTL(w, r)
+	if !ok {
+		return
 	}
 	key := r.URL.Query().Get("key")
 	if r.URL.Query().Get("new") == "1" {
@@ -104,12 +112,7 @@ func (s *Server) previewContent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if p.ExpiresAt <= s.now().Unix() {
-		w.Header().Set("Content-Security-Policy", trustedAppsPageCSP)
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.WriteHeader(http.StatusGone)
-		if r.Method != "HEAD" {
-			s.render(w, "preview-expired.html", ExpiredPreviewView{ExpiresAt: p.ExpiresAt})
-		}
+		s.expiredPreview(w, r, p.ExpiresAt, "")
 		return
 	}
 	if !slash {
@@ -127,7 +130,19 @@ func (s *Server) previewContent(w http.ResponseWriter, r *http.Request) {
 	s.resolveContent(w, r, &store.Version{BaseLayer: *p.Layer}, rest, 0)
 }
 
-type ExpiredPreviewView struct{ ExpiresAt int64 }
+func (s *Server) expiredPreview(w http.ResponseWriter, r *http.Request, expires int64, app string) {
+	w.Header().Set("Content-Security-Policy", trustedAppsPageCSP)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusGone)
+	if r.Method != "HEAD" {
+		s.render(w, "preview-expired.html", ExpiredPreviewView{ExpiresAt: expires, App: app})
+	}
+}
+
+type ExpiredPreviewView struct {
+	ExpiresAt int64
+	App       string
+}
 type PreviewRow struct {
 	*store.Preview
 	URL, CreatorName string

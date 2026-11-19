@@ -1,0 +1,14 @@
+{
+  "previews": [
+    {
+      "created_at": "\u003ctime\u003e",
+      "created_by": "\u003cid\u003e",
+      "expires_at": "\u003ctime\u003e",
+      "hash": "8ed4d3dcfd31",
+      "message": "review notes",
+      "published_version": 2,
+      "updated_at": "\u003ctime\u003e",
+      "url": "http://server.test/demo@8ed4d3dcfd31/"
+    }
+  ]
+}

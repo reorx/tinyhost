@@ -171,7 +171,7 @@ func TestPrivateAppRedirectsThroughAdminAndBack(t *testing.T) {
 func TestAppPageCannotPerformControlledActions(t *testing.T) {
 	f := setup(t)
 	c := adminCookie(t, f)
-	for _, p := range []string{"/device/d_test/approve", "/apps/demo/delete", "/apps/demo/visibility", "/apps/demo/upload"} {
+	for _, p := range []string{"/device/d_test/approve", "/apps/demo/delete", "/apps/demo/visibility", "/apps/demo/upload", "/apps/demo/rollback"} {
 		r := httptest.NewRequest("POST", "http://admin.test"+p, nil)
 		r.AddCookie(c)
 		r.AddCookie(&http.Cookie{Name: "__Host-th_view", Value: c.Value})
@@ -183,8 +183,17 @@ func TestAppPageCannotPerformControlledActions(t *testing.T) {
 			t.Fatal(w.Code)
 		}
 	}
-	for _, item := range []struct{ method, path string }{{"POST", "/apps/x/deploys"}, {"POST", "/apps/x/data"}, {"DELETE", "/apps/x/data"}, {"POST", "/apps/x/promote"}, {"DELETE", "/apps/x"}, {"POST", "/logout"}} {
-		w := authReq(f, "apps.test", item.method, "/_/api/v1"+item.path, "", c)
+	viewer := &http.Cookie{Name: "__Host-th_view", Value: token.New()}
+	if err := f.s.Store.CreateSession(token.Hash(viewer.Value), "viewer", "", "", f.now.Unix()); err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range []struct{ method, path string }{
+		{"POST", "/apps/x/deploys"}, {"POST", "/apps/x/data"}, {"DELETE", "/apps/x/data"},
+		{"POST", "/apps/x/promote"}, {"POST", "/apps/x/rollback"}, {"DELETE", "/apps/x"},
+		{"POST", "/apps/x/previews"}, {"GET", "/apps/x/previews"},
+		{"POST", "/apps/x/previews/abcdef123456/publish"}, {"POST", "/logout"},
+	} {
+		w := authReq(f, "apps.test", item.method, "/_/api/v1"+item.path, "", c, viewer)
 		if w.Code != 401 {
 			t.Fatal(item, w.Code)
 		}

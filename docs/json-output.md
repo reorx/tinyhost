@@ -4,7 +4,7 @@
 
 ## HTTP API
 
-基地址为 apps origin 下的 `/_/api/v1`。除 device/code 和 device/token 外，所有端点仅接受 `Authorization: Bearer <token>`；cookie 不参与鉴权，不开放 CORS。撤销或到期的 token 返回 401。响应 JSON 使用 UTF-8，API 响应为 `Cache-Control: no-store`，不返回 hash；只有设备轮询成功时返回一次 token。GET 同时支持 HEAD。所有 Agent API 响应（包括错误、未知路径和方法）带 `X-Tinyhost-Version`，值为服务端构建版本。
+基地址为 apps origin 下的 `/_/api/v1`。除 device/code 和 device/token 外，所有端点仅接受 `Authorization: Bearer <token>`；cookie 不参与鉴权，不开放 CORS。撤销或到期的 token 返回 401。响应 JSON 使用 UTF-8，API 响应为 `Cache-Control: no-store`，不返回凭证哈希；只有设备轮询成功时返回一次 token。GET 同时支持 HEAD。所有 Agent API 响应（包括错误、未知路径和方法）带 `X-Tinyhost-Version`，值为服务端构建版本。
 
 | 方法 | 相对路径 | 请求 | 成功状态 / DTO | 业务错误 |
 |---|---|---|---|---|
@@ -16,6 +16,10 @@
 | POST | `/apps/{slug}/data` | tar.gz；必填 query `dir`，可选 `message` | 201 `DeployResult` | app_not_found, overlay_conflict, bad_bundle, too_large |
 | DELETE | `/apps/{slug}/data` | 必填 query `dir`，可选 `message`；无 body | 201 `DeployResult` | app_not_found, overlay_conflict, overlay_not_found |
 | POST | `/apps/{slug}/promote` | `PromoteRequest`：`{"version":3}` | 200 `PromoteResult` | app_not_found, version_not_found, bad_request |
+| POST | `/apps/{slug}/rollback` | `RollbackRequest`，必填整数 version，可选 message | 201 `DeployResult` | app_not_found, version_not_found, already_current, bad_request |
+| POST | `/apps/{slug}/previews` | tar.gz，可选 query ttl、message | 201 `AppPreviewResult` | app_not_found, invalid_ttl, bad_request, bad_bundle, too_large, preview_hash_collision |
+| GET | `/apps/{slug}/previews` | 无 | 200 `AppPreviewsResult` | app_not_found |
+| POST | `/apps/{slug}/previews/{hash}/publish` | 空 body 或 `PublishRequest` 对象，可选 message | 201 `DeployResult` | app_not_found, preview_not_found, preview_expired, already_current, bad_request |
 | DELETE | `/apps/{slug}` | 无 | 200 `DeleteResult` | app_not_found, not_creator |
 
 每个端点还可能返回 `unauthorized`（401）或 `internal_error`（500）。未知路径及错误 HTTP 方法由路由器返回 404 / 405，响应不保证为 JSON。
@@ -36,7 +40,7 @@
 
 `data` 的 `dir` 是相对 App 根的目录，服务端补末尾 `/`；不能是根、含点开头的段或与已有目录嵌套。包内路径相对于该目录，整体替换该目录。允许向其他 Agent 的 App 发布和推数据。数据操作总是基于主入口当前版本、生成新版本并 promote。DELETE data 的 files/size 为 0，skipped 为 []。
 
-`DeployResult`（三个发布类端点统一返回）：
+发布类端点共用 `DeployResult`：
 
 ```json
 {
@@ -55,7 +59,7 @@
 }
 ```
 
-`app` 为 slug 字符串，`version` 为数字，`kind` 为 app 或 data。`data_dir` 在 App 包发布为 null，数据操作为标准化后的目录字符串。files/size 只统计本次新增层中的托管文件；manifest 不计入。`promoted` 表示本次操作是否要求移动主入口；`current_version` 为响应时读取的主入口，并发操作可能已经再次移动它。`app_created_by` 为客户端 ID（未来 Owner 创建的为 owner）。
+`app` 为 slug 字符串，`version` 为数字，`kind` 为 app 或 data。`data_dir` 在 App 包发布为 null，数据操作为标准化后的目录字符串。files/size 统计本次新建或复用层中的托管文件；manifest 不计入。`promoted` 表示本次操作是否要求移动主入口；`current_version` 为响应时读取的主入口，并发操作可能已经再次移动它。`app_created_by` 为客户端 ID（未来 Owner 创建的为 owner）。
 
 ### 查询响应
 
@@ -129,6 +133,10 @@ CLI 直接序列化下表的 `internal/api` DTO，不包装额外的 success、r
 | `apps` | `AppsResult` |
 | `info <slug>` | `AppDetail` |
 | `versions <slug>` | `VersionsResult` |
+| `rollback <slug> vN [-m 说明]` | `DeployResult`，含 rollback_of |
+| `publish <slug> <hash>` 或 `publish <预览链接>`，可加 `-m` | `DeployResult`，含 preview |
+| `preview [路径] --app <slug>` | `AppPreviewResult` |
+| `previews --app <slug>` | `AppPreviewsResult` |
 | `promote <slug> <vN>` | `PromoteResult` |
 | `delete <slug>` | `DeleteResult` |
 | `whoami` | `WhoamiResult`；文本模式另显示所连接的服务器地址 |
@@ -201,3 +209,16 @@ CLI 在配置目录保存 `previews.json`，形状为 `{ "<server>|<绝对路径
 deploy、data push、preview 在打包时检查实际纳入上传的 `.html .htm .css .js .mjs` 文件（每文件不超过 1MiB），忽略远程、协议相对、data URI 和相对地址。警告按文件/行排序，每行一条、每文件最多五条、总共二十条；stderr 在上传前显示文件、行号、原文和相对路径建议，上传照常执行。
 
 `DeployResult` 和 `PreviewResult` 增加可选字段 `warnings?: [{"file":"index.html","line":1,"text":"<script src=\"/app.js\">"}]`，没有警告时省略。仅 CLI 本地生成此字段；HTTP 直传不会执行路径检查。原有 skipped、JSON 输出流和退出码语义保持不变。
+
+
+## App 预览与回滚
+
+App 预览必须指定已有 App。ttl 默认 24h，接受 1h–168h。三个新写接口的说明最多 1024 字节，rollback 和 publish 的 JSON body 最多 4096 字节。publish 省略说明或传空字符串时沿用预览说明。
+
+`AppPreview` 包含 hash（12 位小写十六进制）、url、message、created_by（Agent ID）、created_at、updated_at、expires_at，已发布时增加 published_version（数字）。同一个 App 内重复上传相同文件和 manifest 返回同一个 hash，保留原创建者、说明和已发布版本，有效期至少延续到此次指定的时间。发生短哈希碰撞时返回 409 `preview_hash_collision`。上传和续期均不占版本号。
+
+`AppPreviewResult` 在上述字段同一层增加 app（slug）、current_version（数字或 null）、reused（布尔值），CLI 可附 warnings。列表 `AppPreviewsResult` 为 `{"previews":[AppPreview,...]}`，仅含有效预览，按更新时间降序、hash 升序排列，空列表为 []。
+
+`DeployResult` 和 `Version` 新增可选来源字段 rollback_of（版本号）和 preview（哈希）。rollback 与 publish 都生成 kind=app 的版本并更新主入口，使用目标 App 包和操作当时主入口的数据覆盖层。重复操作遇到同一包层返回 409 `already_current`。未知目标返回 404，发布过期预览返回 410 `preview_expired`。普通部署和后续数据版本省略来源字段。
+
+`/<slug>@<hash>/` 按 App 可见性鉴权，预览包叠加每次请求时主入口的数据。公开响应使用 no-cache，私有响应使用 private, no-cache。过期立即返回 410，过期满七天后的 GC 删除记录，链接返回 404。

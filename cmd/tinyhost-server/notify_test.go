@@ -166,3 +166,21 @@ func TestDistributionAndNotificationFlags(t *testing.T) {
 		t.Fatal(s.Config.DLCacheDir)
 	}
 }
+
+// Behavior: rollback and preview publication notices identify the app, new version, source, actor and message.
+func TestReleaseNotificationsDescribeTheSelectedPackage(t *testing.T) {
+	s, _, _ := notificationServer(t, "")
+	app, err := s.Store.CreateApp("demo", "", "private", "owner")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct{ action, detail, title, source string }{
+		{"app.rolled_back", `{"version":4,"rollback_of":2,"message":"reviewed"}`, "demo v4 已回滚", "v2"},
+		{"app.preview_published", `{"version":5,"preview":"abcdef012345","message":"reviewed"}`, "demo v5 已发布预览", "abcdef012345"},
+	} {
+		m, err := notificationMessage(s, server.Event{Action: tc.action, Actor: "owner", AppID: app.ID, Detail: tc.detail})
+		if err != nil || m.Title != tc.title || !strings.Contains(m.Message, tc.source) || !strings.Contains(m.Message, "Owner") || !strings.Contains(m.Message, "reviewed") || m.URL != "http://apps.test/demo/" {
+			t.Fatal(m, err)
+		}
+	}
+}

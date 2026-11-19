@@ -51,13 +51,15 @@ type AppDetail struct {
 	Overlays []Overlay       `json:"overlays"`
 }
 type Version struct {
-	Number    int     `json:"number"`
-	Kind      string  `json:"kind"`
-	DataDir   *string `json:"data_dir"`
-	Message   string  `json:"message"`
-	CreatedBy string  `json:"created_by"`
-	CreatedAt int64   `json:"created_at"`
-	Current   bool    `json:"current"`
+	RollbackOf *int    `json:"rollback_of,omitempty"`
+	Preview    *string `json:"preview,omitempty"`
+	Number     int     `json:"number"`
+	Kind       string  `json:"kind"`
+	DataDir    *string `json:"data_dir"`
+	Message    string  `json:"message"`
+	CreatedBy  string  `json:"created_by"`
+	CreatedAt  int64   `json:"created_at"`
+	Current    bool    `json:"current"`
 }
 type VersionsResult struct {
 	Versions []Version `json:"versions"`
@@ -76,6 +78,8 @@ type DeleteResult struct {
 	TrashDays int    `json:"trash_days"`
 }
 type DeployResult struct {
+	RollbackOf     *int             `json:"rollback_of,omitempty"`
+	Preview        *string          `json:"preview,omitempty"`
 	Warnings       []bundle.Warning `json:"warnings,omitempty"`
 	App            string           `json:"app"`
 	Version        int              `json:"version"`
@@ -157,4 +161,36 @@ type PreviewsResult struct {
 type DeletePreviewResult struct {
 	ID      string `json:"id"`
 	Deleted bool   `json:"deleted"`
+}
+
+type RollbackRequest struct {
+	Version int    `json:"version"`
+	Message string `json:"message,omitempty"`
+}
+
+type PublishRequest struct {
+	Message string `json:"message,omitempty"`
+}
+
+type AppPreview struct {
+	Hash             string `json:"hash"`
+	URL              string `json:"url"`
+	Message          string `json:"message"`
+	CreatedBy        string `json:"created_by"`
+	CreatedAt        int64  `json:"created_at"`
+	UpdatedAt        int64  `json:"updated_at"`
+	ExpiresAt        int64  `json:"expires_at"`
+	PublishedVersion *int   `json:"published_version,omitempty"`
+}
+
+type AppPreviewResult struct {
+	AppPreview
+	App            string           `json:"app"`
+	CurrentVersion *int             `json:"current_version"`
+	Reused         bool             `json:"reused"`
+	Warnings       []bundle.Warning `json:"warnings,omitempty"`
+}
+
+type AppPreviewsResult struct {
+	Previews []AppPreview `json:"previews"`
 }

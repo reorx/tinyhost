@@ -31,7 +31,8 @@ func (s *Server) content(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	segment, rest, hasSlash := strings.Cut(strings.TrimPrefix(r.URL.Path, "/"), "/")
-	name, number, err := slug.ParseSegment(segment)
+	ref, err := slug.ParseRef(segment)
+	name, number := ref.Name, ref.Version
 	if err != nil {
 		http.NotFound(w, r)
 		return
@@ -58,6 +59,9 @@ func (s *Server) content(w http.ResponseWriter, r *http.Request) {
 		if number != 0 {
 			newSegment += fmt.Sprintf("@v%d", number)
 		}
+		if ref.Preview != "" {
+			newSegment += "@" + ref.Preview
+		}
 		_, escapedRest, _ := strings.Cut(strings.TrimPrefix(r.URL.EscapedPath(), "/"), "/")
 		location := "/" + newSegment + "/" + escapedRest
 		if r.URL.RawQuery != "" {
@@ -83,6 +87,10 @@ func (s *Server) content(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.Header().Set("Cache-Control", "private, no-cache")
+	}
+	if ref.Preview != "" {
+		s.appPreviewContent(w, r, a, ref.Preview, rest)
+		return
 	}
 	v, err := s.Store.ResolveVersion(a.ID, number)
 	if err != nil {

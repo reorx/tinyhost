@@ -325,6 +325,8 @@ a.app-link:hover .slug { text-decoration: underline; color: var(--accent-text); 
 .msg { color: var(--text-2); max-width: 36ch; }
 .ip { font-size: 0.8125rem; }
 
+.version-source { display: block; color: var(--text-2); font-weight: normal; }
+.tbl-versions .row-actions { white-space: normal; }
 .row-actions { white-space: nowrap; text-align: right; }
 .row-actions > * { display: inline-flex; vertical-align: middle; }
 .row-actions > * + * { margin-left: 6px; }

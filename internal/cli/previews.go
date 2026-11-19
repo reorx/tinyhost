@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"flag"
 	"fmt"
 	"net/url"
 	"os"
@@ -10,16 +11,31 @@ import (
 
 	"github.com/reorx/tinyhost/internal/api"
 	"github.com/reorx/tinyhost/internal/bundle"
+	"github.com/reorx/tinyhost/internal/slug"
 	"github.com/reorx/tinyhost/internal/token"
 )
 
 func init() {
-	register(&command{Name: "preview", Summary: "[路径] [--ttl 24h] [--new] 创建或更新临时预览", Run: previewCommand})
-	register(&command{Name: "previews", Summary: "列出自己的预览 | rm <链接或 ID>", Run: previewsCommand})
+	register(&command{Name: "preview", Summary: "[路径] [--ttl 24h] [--new | --app SLUG [-m 说明]] 创建或更新临时预览", Run: previewCommand})
+	register(&command{Name: "previews", Summary: "[--app SLUG] 列出有效预览 | rm <链接或 ID>", Run: previewsCommand})
+}
+
+func previewAppFlag(fs *flag.FlagSet) *string {
+	var app string
+	fs.Func("app", "App slug", func(value string) error {
+		if !slug.Valid(value) {
+			return fmt.Errorf("无效的 App slug %q", value)
+		}
+		app = value
+		return nil
+	})
+	return &app
 }
 
 func previewCommand(c *context, args []string) (any, error) {
 	fs := c.flags("preview")
+	app := previewAppFlag(fs)
+	msg := fs.String("m", "", "App 预览说明")
 	var rawTTL string
 	var fresh bool
 	fs.StringVar(&rawTTL, "ttl", "24h", "有效期（1h–168h）")
@@ -31,6 +47,12 @@ func previewCommand(c *context, args []string) (any, error) {
 	if len(positional) > 1 {
 		return nil, usage("preview 最多接受一个路径")
 	}
+	if *app != "" && fresh {
+		return nil, usage("--app 和 --new 不能同时使用")
+	}
+	if *app == "" && *msg != "" {
+		return nil, usage("-m 需要 --app")
+	}
 	ttl, err := time.ParseDuration(rawTTL)
 	if err != nil || ttl < time.Hour || ttl > 168*time.Hour {
 		return nil, usage("预览有效期必须在 1h–168h 之间，例如 --ttl 24h")
@@ -39,22 +61,49 @@ func previewCommand(c *context, args []string) (any, error) {
 	if len(positional) == 1 {
 		source = positional[0]
 	}
-	absolute, err := filepath.Abs(source)
-	if err != nil {
-		return nil, err
-	}
-	origin, err := c.serverURL()
-	if err != nil {
-		return nil, err
-	}
 	packed, summary, err := bundle.Pack(source)
 	if err != nil {
 		return nil, err
 	}
 	defer os.Remove(packed)
+	c.uploadWarnings(summary)
+	file, err := os.Open(packed)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	query := url.Values{"ttl": {ttl.String()}}
+	if *app != "" {
+		query.Set("message", *msg)
+		var result api.AppPreviewResult
+		err = c.request("POST", "/apps/"+*app+"/previews", query, file, "application/gzip", &result)
+		result.Warnings = summary.PathWarnings
+		return result, err
+	}
+	key, basename, err := c.localPreviewKey(source, fresh)
+	if err != nil {
+		return nil, err
+	}
+	query.Set("key", key)
+	query.Set("source", basename)
+	var result api.PreviewResult
+	err = c.request("POST", "/previews", query, file, "application/gzip", &result)
+	result.Warnings = summary.PathWarnings
+	return result, err
+}
+
+func (c *context) localPreviewKey(source string, fresh bool) (string, string, error) {
+	absolute, err := filepath.Abs(source)
+	if err != nil {
+		return "", "", err
+	}
+	origin, err := c.serverURL()
+	if err != nil {
+		return "", "", err
+	}
 	keys := map[string]string{}
 	if err = readAuthFile("previews.json", &keys); err != nil && !os.IsNotExist(err) {
-		return nil, err
+		return "", "", err
 	}
 	if keys == nil {
 		keys = map[string]string{}
@@ -67,26 +116,26 @@ func previewCommand(c *context, args []string) (any, error) {
 		// Persist before uploading so a network failure can be retried with the same
 		// key. --new rotates the local key; old links keep their own server records.
 		if err = saveAuthFile("previews.json", keys); err != nil {
-			return nil, err
+			return "", "", err
 		}
 	}
-	c.uploadWarnings(summary)
-	file, err := os.Open(packed)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	query := url.Values{"key": {key}, "ttl": {ttl.String()}, "source": {filepath.Base(absolute)}}
-	var result api.PreviewResult
-	err = c.request("POST", "/previews", query, file, "application/gzip", &result)
-	result.Warnings = summary.PathWarnings
-	return result, err
+	return key, filepath.Base(absolute), nil
 }
 
 func previewsCommand(c *context, args []string) (any, error) {
-	positional, err := c.parse(c.flags("previews"), args)
+	fs := c.flags("previews")
+	app := previewAppFlag(fs)
+	positional, err := c.parse(fs, args)
 	if err != nil {
 		return nil, err
+	}
+	if *app != "" {
+		if len(positional) != 0 {
+			return nil, usage("previews --app 只接受 App 名")
+		}
+		var result api.AppPreviewsResult
+		err = c.request("GET", "/apps/"+*app+"/previews", nil, nil, "", &result)
+		return result, err
 	}
 	if len(positional) == 0 {
 		var result api.PreviewsResult

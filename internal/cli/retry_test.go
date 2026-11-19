@@ -93,6 +93,8 @@ func TestReadOnlyRequestsRetryGatewayErrorsButWritesDoNot(t *testing.T) {
 	}{
 		{[]string{"deploy", f.site, "--app", "demo"}, "POST /_/api/v1/apps/demo/deploys"},
 		{[]string{"promote", "demo", "v1"}, "POST /_/api/v1/apps/demo/promote"},
+		{[]string{"rollback", "demo", "v1"}, "POST /_/api/v1/apps/demo/rollback"},
+		{[]string{"publish", "demo", "abcdef123456"}, "POST /_/api/v1/apps/demo/previews/abcdef123456/publish"},
 		{[]string{"delete", "demo"}, "DELETE /_/api/v1/apps/demo"},
 	} {
 		if code, _, errOut := run(tc.args...); code != 1 || !strings.Contains(errOut, "HTTP 522") {

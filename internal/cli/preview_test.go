@@ -103,3 +103,51 @@ func TestUploadsWarnAboutAbsolutePathsWithoutBlocking(t *testing.T) {
 		}
 	}
 }
+
+// Behavior: App previews require an explicit app, keep main in place, renew the same URL, and can be published by URL or slug/hash with an optional message.
+func TestReviewPublishAndRollbackFromCLI(t *testing.T) {
+	f := setup(t)
+	f.create()
+	f.write("index.html", "review")
+	if standalone := previewDoc(t, f.ok("preview", f.site, "--json")); !strings.Contains(standalone["url"].(string), "/_p/") {
+		t.Fatal(standalone)
+	}
+	raw := f.ok("preview", f.site, "--app", "demo", "--ttl", "1h", "-m", "review notes", "--json")
+	checkGolden(t, "app_preview", raw)
+	p := previewDoc(t, raw)
+	hash, link := p["hash"].(string), p["url"].(string)
+	if p["current_version"] != float64(1) || p["message"] != "review notes" || p["expires_at"].(float64)-p["updated_at"].(float64) != 3600 {
+		t.Fatal(p)
+	}
+	human := f.ok("preview", f.site, "--app", "demo")
+	for _, want := range []string{link, "v1", "tinyhost publish demo " + hash, "过期"} {
+		if !strings.Contains(human, want) {
+			t.Fatal(human)
+		}
+	}
+	checkGolden(t, "publish", f.ok("publish", link, "-m", "approved", "--json"))
+	checkGolden(t, "app_previews", f.ok("previews", "--app", "demo", "--json"))
+	f.content("/demo/", "review")
+	if out := f.ok("preview", f.site, "--app", "demo"); !strings.Contains(out, "已发布为 v2") {
+		t.Fatal(out)
+	}
+	checkGolden(t, "rollback", f.ok("rollback", "demo", "v1", "-m", "restore", "--json"))
+	if out := f.ok("versions", "demo"); !strings.Contains(out, "回滚自 v1") || !strings.Contains(out, "来自预览 "+hash) || !strings.Contains(out, "approved") || !strings.Contains(out, "restore") {
+		t.Fatal(out)
+	}
+	f.ok("publish", "demo", hash)
+	if out := f.ok("rollback", "demo", "v1"); !strings.Contains(out, "v5 已回滚到 v1") {
+		t.Fatal(out)
+	}
+	for _, args := range [][]string{
+		{"preview", f.site, "--app", "demo", "--new"},
+		{"publish", "https://elsewhere.test/demo@" + hash + "/"},
+		{"publish", f.http.URL + "/demo@v1/"}, {"publish", link + "index.html"},
+		{"previews", "--app", "demo", "rm", hash},
+	} {
+		before := f.requests.Load()
+		if code, out, errOut := run(args...); code != 2 || f.requests.Load() != before {
+			t.Fatal(args, code, out, errOut)
+		}
+	}
+}

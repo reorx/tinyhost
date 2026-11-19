@@ -21,7 +21,14 @@ func (c *context) printHuman(value any) error {
 	var b strings.Builder
 	switch result := value.(type) {
 	case api.DeployResult:
-		fmt.Fprintf(&b, "✓ %s v%d 已发布（%d 个文件，%d 字节）\n", result.App, result.Version, result.Files, result.Size)
+		switch {
+		case result.RollbackOf != nil:
+			fmt.Fprintf(&b, "✓ %s v%d 已回滚到 v%d 的 App 包（数据目录沿用主入口）\n", result.App, result.Version, *result.RollbackOf)
+		case result.Preview != nil:
+			fmt.Fprintf(&b, "✓ %s v%d 已发布预览 %s（数据目录沿用主入口）\n", result.App, result.Version, *result.Preview)
+		default:
+			fmt.Fprintf(&b, "✓ %s v%d 已发布（%d 个文件，%d 字节）\n", result.App, result.Version, result.Files, result.Size)
+		}
 		if result.DataDir != nil {
 			fmt.Fprintf(&b, "  覆盖目录：%s\n", *result.DataDir)
 		}
@@ -32,6 +39,21 @@ func (c *context) printHuman(value any) error {
 			fmt.Fprintf(&b, "  主入口仍指向 %s：%s\n", current(result.CurrentVersion), result.MainURL)
 		}
 		fmt.Fprintf(&b, "  创建者：%s\n", result.AppCreatedBy)
+	case api.AppPreviewResult:
+		fmt.Fprintf(&b, "✓ App 预览：%s\n  %s 过期，主入口仍为：%s\n", result.URL, timestamp(result.ExpiresAt), current(result.CurrentVersion))
+		if result.PublishedVersion != nil {
+			fmt.Fprintf(&b, "  已发布为 v%d\n", *result.PublishedVersion)
+		}
+		fmt.Fprintf(&b, "  发布命令：tinyhost publish %s %s\n", result.App, result.Hash)
+	case api.AppPreviewsResult:
+		fmt.Fprintf(&b, "有效 App 预览：%d\n", len(result.Previews))
+		for _, p := range result.Previews {
+			state := "待发布"
+			if p.PublishedVersion != nil {
+				state = fmt.Sprintf("已发布为 v%d", *p.PublishedVersion)
+			}
+			fmt.Fprintf(&b, "%s  %s  %s  %s  %s 过期\n  %s\n", p.Hash, p.Message, p.CreatedBy, state, timestamp(p.ExpiresAt), p.URL)
+		}
 	case api.PreviewResult:
 		fmt.Fprintf(&b, "✓ 预览已更新，%s 过期\n  %s\n", timestamp(result.ExpiresAt), result.URL)
 	case api.PreviewsResult:
@@ -77,6 +99,12 @@ func (c *context) printHuman(value any) error {
 				if v.DataDir != nil {
 					kind += " " + *v.DataDir
 				}
+			}
+			if v.RollbackOf != nil {
+				kind += fmt.Sprintf("（回滚自 v%d）", *v.RollbackOf)
+			}
+			if v.Preview != nil {
+				kind += "（来自预览 " + *v.Preview + "）"
 			}
 			marker := ""
 			if v.Current {

@@ -86,7 +86,7 @@ func (s *Server) versions(w http.ResponseWriter, r *http.Request) {
 	for _, v := range versions {
 		current := a.CurrentVersion != nil && *a.CurrentVersion == v.Number
 		out.Versions = append(out.Versions, api.Version{
-			Number: v.Number, Kind: v.Kind, DataDir: v.DataDir, Message: v.Message,
+			Number: v.Number, RollbackOf: v.RollbackOf, Preview: v.Preview, Kind: v.Kind, DataDir: v.DataDir, Message: v.Message,
 			CreatedBy: v.CreatedBy, CreatedAt: v.CreatedAt, Current: current,
 		})
 	}
@@ -249,6 +249,14 @@ func (s *Server) mutationError(w http.ResponseWriter, a *store.App, err error) {
 		fail(w, 404, "app_not_found", "App 不存在或已删除", "检查 slug")
 	case errors.Is(err, store.ErrVersionNotFound):
 		fail(w, 404, "version_not_found", "版本不存在或已清理", "查询 versions")
+	case errors.Is(err, store.ErrAlreadyCurrent):
+		fail(w, 409, "already_current", "主入口已使用这个 App 包", "运行 tinyhost versions 查看版本")
+	case errors.Is(err, store.ErrPreviewNotFound):
+		fail(w, 404, "preview_not_found", "App 预览不存在", "用 previews --app 查看有效预览")
+	case errors.Is(err, store.ErrPreviewExpired):
+		fail(w, 410, "preview_expired", "App 预览已过期", "重新运行 preview --app")
+	case errors.Is(err, store.ErrPreviewCollision):
+		fail(w, 409, "preview_hash_collision", "不同内容使用了相同的短哈希", "调整 App 包内容后重新预览")
 	case errors.Is(err, store.ErrOverlayNotFound):
 		fail(w, 404, "overlay_not_found", "覆盖目录不存在", "查询 App 详情")
 	case errors.Is(err, store.ErrOverlayConflict):
@@ -267,9 +275,13 @@ func (s *Server) mutationError(w http.ResponseWriter, a *store.App, err error) {
 	}
 }
 func (s *Server) deployed(w http.ResponseWriter, a *store.App, v *store.Version, summary bundle.Summary, promoted bool) {
-	latest, err := s.Store.AppBySlug(a.Slug)
+	latest, err := s.Store.AppByID(a.ID)
 	if err != nil {
 		s.internal(w, err)
+		return
+	}
+	if latest == nil {
+		s.mutationError(w, a, store.ErrAppNotFound)
 		return
 	}
 	skipped := summary.Skipped
@@ -277,7 +289,7 @@ func (s *Server) deployed(w http.ResponseWriter, a *store.App, v *store.Version,
 		skipped = []string{}
 	}
 	writeJSON(w, 201, api.DeployResult{
-		App: a.Slug, Version: v.Number, Kind: v.Kind, DataDir: v.DataDir,
+		App: a.Slug, Version: v.Number, RollbackOf: v.RollbackOf, Preview: v.Preview, Kind: v.Kind, DataDir: v.DataDir,
 		Files: summary.Files, Size: summary.Size,
 		VersionURL: fmt.Sprintf("%s@v%d/", strings.TrimSuffix(s.mainURL(a.Slug), "/"), v.Number),
 		MainURL:    s.mainURL(a.Slug), Promoted: promoted, CurrentVersion: latest.CurrentVersion,

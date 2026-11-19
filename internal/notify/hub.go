@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-const DefaultEvents = "device.requested,app.created,app.deployed"
+const DefaultEvents = "device.requested,app.created,app.deployed,app.rolled_back,app.preview_published"
 
 type Config struct{ NtfyURL, NtfyToken, WebhookURL, Events string }
 type Message struct {

@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// Behavior: default subscriptions forward only device requests, new apps and app bundles, with identical webhook events and ntfy metadata.
+// Behavior: default subscriptions forward device requests, new apps, app deployments, rollbacks and preview publications, with identical webhook events and ntfy metadata.
 func TestNotifyDefaultEvents(t *testing.T) {
 	headers := make(chan http.Header, 8)
 	webhooks := make(chan Message, 8)
@@ -24,14 +24,14 @@ func TestNotifyDefaultEvents(t *testing.T) {
 	}))
 	defer hook.Close()
 	h := New(Config{NtfyURL: ntfy.URL, NtfyToken: "secret", WebhookURL: hook.URL}, slog.New(slog.NewJSONHandler(io.Discard, nil)))
-	for _, event := range []string{"device.requested", "app.created", "app.deployed", "data.pushed", "app.promoted", "app.deleted", "preview.created"} {
+	for _, event := range []string{"device.requested", "app.created", "app.deployed", "data.pushed", "app.promoted", "app.deleted", "preview.created", "app.previewed", "app.rolled_back", "app.preview_published"} {
 		h.Publish(Message{Event: event, Title: "测试", Message: "内容", URL: "https://apps.test/demo/", At: 123})
 	}
 	h.Close()
-	if len(headers) != 3 || len(webhooks) != 3 {
+	if len(headers) != 5 || len(webhooks) != 5 {
 		t.Fatalf("ntfy=%d hook=%d", len(headers), len(webhooks))
 	}
-	for range 3 {
+	for range 5 {
 		hd := <-headers
 		m := <-webhooks
 		if hd.Get("Click") != m.URL || hd.Get("Title") == "" || hd.Get("Tags") == "" || hd.Get("Priority") == "" || hd.Get("Authorization") != "Bearer secret" || m.At != 123 {

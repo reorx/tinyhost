@@ -29,6 +29,8 @@ func notificationCallback(s *server.Server, h *notify.Hub) func(server.Event) {
 func notificationMessage(s *server.Server, e server.Event) (notify.Message, error) {
 	var detail struct {
 		Name, Hostname, IP, Code, URL, Message string
+		Preview                                string
+		RollbackOf                             int `json:"rollback_of"`
 		Version                                int
 	}
 	if err := json.Unmarshal([]byte(e.Detail), &detail); err != nil {
@@ -70,6 +72,12 @@ func notificationMessage(s *server.Server, e server.Event) (notify.Message, erro
 	case "app.created":
 		m.Title = "新 App：" + app.Slug
 		m.Message = fmt.Sprintf("创建者：%s\n标题：%s", actor, app.Title)
+	case "app.rolled_back":
+		m.Title = fmt.Sprintf("%s v%d 已回滚", app.Slug, detail.Version)
+		m.Message = fmt.Sprintf("%s 恢复了 v%d 的 App 包，沿用主入口的数据。\n说明：%s", actor, detail.RollbackOf, detail.Message)
+	case "app.preview_published":
+		m.Title = fmt.Sprintf("%s v%d 已发布预览", app.Slug, detail.Version)
+		m.Message = fmt.Sprintf("预览：%s\n发布者：%s\n说明：%s", detail.Preview, actor, detail.Message)
 	case "app.deployed":
 		m.Title = fmt.Sprintf("%s v%d 已发布", app.Slug, detail.Version)
 		m.Message = fmt.Sprintf("发布者：%s\n说明：%s", actor, detail.Message)

@@ -27,7 +27,7 @@ All names, teams and content in these screenshots are fictional demonstration da
 
 - **Versioned publishing.** Every App or data upload creates an immutable snapshot. Keep a stable main URL, share a version URL, or roll back.
 - **Separate code and data.** One agent can publish a dashboard while another updates its data directory, without replacing the dashboard code.
-- **Temporary previews.** Reuse a preview link while iterating; it expires automatically. Anyone with the link can view it.
+- **Temporary previews.** Share a standalone public link, or preview changes on an existing App with its usual access controls and live data. Both kinds expire automatically.
 - **Owner control.** New Apps are private by default. Manage visibility, versions, agents and the recycle bin from the console. The Owner can also upload a folder or `.zip` on an App's page as a new version, without installing the CLI.
 
 Static files only: tinyhost does not run Node, Python or other backend processes. It is designed for one owner and trusted agents, with shared publishing access across Apps.
@@ -54,6 +54,10 @@ tinyhost deploy ./site --app weekly-report --create
 ```
 
 The preview command returns a temporary link. Deploy returns a main URL such as `https://apps.example.com/weekly-report/` and a version URL such as `https://apps.example.com/weekly-report@v1/`. A newly created App requires the owner to sign in to view it; choose public visibility deliberately when creating it, or change it later in the console.
+
+For an existing App, run `tinyhost preview ./site --app weekly-report` and share the returned link for review. After approval, pass that URL to `tinyhost publish`. The new version includes the reviewed files and the data currently on main.
+
+To restore an earlier App package while keeping the latest data, run `tinyhost rollback weekly-report v1`. To restore both code and data exactly as they were in v1, use `tinyhost promote weekly-report v1`.
 
 Use relative asset paths (`./app.js`, `data/report.json`) and hash routing for single-page Apps. The same files must work under main, version and preview URLs. The CLI warns about root-relative references before uploading.
 

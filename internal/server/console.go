@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/reorx/tinyhost/internal/api"
 	"github.com/reorx/tinyhost/internal/bundle"
 	"github.com/reorx/tinyhost/internal/slug"
 	"github.com/reorx/tinyhost/internal/store"
@@ -40,7 +41,13 @@ type UploadedView struct {
 	Current      bool
 	PathWarnings []bundle.Warning
 }
+type AppPreviewRow struct {
+	api.AppPreview
+	CreatorName string
+}
+
 type AppView struct {
+	Previews             []AppPreviewRow
 	App                  *store.App
 	MainURL, CreatorName string
 	Versions             []VersionRow
@@ -87,6 +94,8 @@ func (s *Server) consoleError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, store.ErrAppNotFound), errors.Is(err, store.ErrVersionNotFound), errors.Is(err, store.ErrOverlayNotFound):
 		s.adminError(w, err.Error(), 404)
+	case errors.Is(err, store.ErrAlreadyCurrent):
+		s.adminError(w, "主入口已使用这个 App 包", 409)
 	case errors.Is(err, store.ErrSlugTaken), errors.Is(err, store.ErrCurrentVersion), errors.Is(err, store.ErrOverlayConflict):
 		s.adminError(w, err.Error(), 409)
 	case errors.Is(err, store.ErrInvalidInput):
@@ -186,6 +195,14 @@ func (s *Server) consoleApp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	view := AppView{App: a, MainURL: s.mainURL(a.Slug), CreatorName: actorName(names, a.CreatedBy), Events: events, Versions: []VersionRow{}, Overlays: []OverlayRow{}}
+	previews, err := s.Store.AppPreviews(a.ID, s.now().Unix())
+	if err != nil {
+		s.adminInternal(w, err)
+		return
+	}
+	for _, p := range previews {
+		view.Previews = append(view.Previews, AppPreviewRow{s.appPreviewDTO(a, p), actorName(names, p.CreatedBy)})
+	}
 	for _, v := range versions {
 		current := a.CurrentVersion != nil && *a.CurrentVersion == v.Number
 		view.Versions = append(view.Versions, VersionRow{v, actorName(names, v.CreatedBy), fmt.Sprintf("%s@v%d/", strings.TrimSuffix(view.MainURL, "/"), v.Number), current})
@@ -257,15 +274,25 @@ func (s *Server) consoleAppAction(w http.ResponseWriter, r *http.Request) {
 		action = "app.renamed"
 		detail["new_slug"] = name
 		target = "/apps/" + name
-	case strings.HasSuffix(r.URL.Path, "/promote"):
+	case strings.HasSuffix(r.URL.Path, "/promote"), strings.HasSuffix(r.URL.Path, "/rollback"):
 		n, parseErr := strconv.Atoi(r.PostForm.Get("version"))
 		if parseErr != nil || n <= 0 {
 			s.adminError(w, "无效版本号", 400)
 			return
 		}
-		err = s.Store.Promote(a.ID, n)
-		action = "app.promoted"
-		detail["version"] = n
+		if strings.HasSuffix(r.URL.Path, "/rollback") {
+			var v *store.Version
+			v, err = s.Store.CommitRollback(a.ID, n, "", "owner")
+			action = "app.rolled_back"
+			detail["rollback_of"] = n
+			if v != nil {
+				detail["version"] = v.Number
+			}
+		} else {
+			err = s.Store.Promote(a.ID, n)
+			action = "app.promoted"
+			detail["version"] = n
+		}
 	case r.PathValue("n") != "":
 		n, parseErr := strconv.Atoi(r.PathValue("n"))
 		if parseErr != nil || n <= 0 {

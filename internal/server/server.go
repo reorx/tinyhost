@@ -131,6 +131,10 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /_/api/v1/apps/{slug}/deploys", s.auth(s.deploy))
 	mux.HandleFunc("POST /_/api/v1/apps/{slug}/data", s.auth(s.data))
 	mux.HandleFunc("DELETE /_/api/v1/apps/{slug}/data", s.auth(s.data))
+	mux.HandleFunc("POST /_/api/v1/apps/{slug}/previews/{hash}/publish", s.auth(s.publishAppPreview))
+	mux.HandleFunc("GET /_/api/v1/apps/{slug}/previews", s.auth(s.listAppPreviews))
+	mux.HandleFunc("POST /_/api/v1/apps/{slug}/previews", s.auth(s.createAppPreview))
+	mux.HandleFunc("POST /_/api/v1/apps/{slug}/rollback", s.auth(s.rollback))
 	mux.HandleFunc("POST /_/api/v1/apps/{slug}/promote", s.auth(s.promote))
 	mux.HandleFunc("DELETE /_/api/v1/apps/{slug}", s.auth(s.deleteApp))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

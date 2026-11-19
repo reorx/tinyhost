@@ -25,7 +25,7 @@ In cloud environments, a securely supplied `TINYHOST_TOKEN` overrides saved cred
 
 ## Prepare an App
 
-Use a directory containing `index.html`, or pass one HTML file (uploaded as index.html). Keep assets relative: `./app.js`, `./assets/site.css`, `data/sales.json`. The same files appear under `/slug/`, `/slug@vN/` and `/_p/token/`; root-relative URLs such as `/assets/app.js` break under those prefixes. Use hash routing for SPAs. JSON files are a convenient data source.
+Use a directory containing `index.html`, or pass one HTML file (uploaded as index.html). Keep assets relative: `./app.js`, `./assets/site.css`, `data/sales.json`. The same files appear under `/slug/`, `/slug@vN/`, `/slug@hash/` and `/_p/token/`; root-relative URLs such as `/assets/app.js` break under those prefixes. Use hash routing for SPAs. JSON files are a convenient data source.
 
 Before upload, deploy, data push and preview warn about root-relative references with file, line and source text. Fix them to relative paths; warnings do not block uploads. Scanning is bounded (text files up to 1 MiB, five findings per file, twenty overall), so a clean scan is not a guarantee that every runtime URL works. Dotfiles, node_modules and symlinks are excluded except .well-known. Maximum upload: 50 MiB and 1000 files by default; the server may set different limits.
 
@@ -43,6 +43,8 @@ This file is metadata, not a public web asset. `app` supplies the default slug. 
 
 ## Preview while iterating
 
+For a standalone public link:
+
 ```sh
 tinyhost preview ./site
 tinyhost preview ./site --ttl 1h
@@ -52,6 +54,15 @@ tinyhost previews rm 'PREVIEW_URL_OR_ID'
 ```
 
 The same Agent, server and absolute local path reuse the same URL and refresh its expiry. TTL defaults to 24h and must be between 1h and 168h (7 days). `--new` creates a separate link; subsequent previews of that path update the new link. The old link survives until expiry or deletion. Preview links are public to anyone who has them, even without login. They expire with HTTP 410 and become 404 after cleanup seven days later. Previews are separate from Apps, create no versions and have no data overlays. Agents can list and delete only their own previews.
+
+For review on an existing App, specify the App explicitly, even when tinyhost.json contains its slug:
+
+```sh
+tinyhost preview ./site --app sales-report --ttl 24h -m "Review chart layout"
+tinyhost previews --app sales-report
+```
+
+Share the returned `/sales-report@hash/` URL and expiry. This link uses the App's visibility and shows its current data overlays on every request. Identical files and manifest renew the same link. Changing the package creates a different link. App previews use the same TTL bounds, expire automatically and leave the version number and main URL untouched. After approval, run the exact `tinyhost publish sales-report HASH` command printed by preview, or pass the preview URL to `tinyhost publish`. Any approved Agent can publish the reviewed package with the data current at publication. Use `-m` to override the preview's message.
 
 ## Publish and inspect
 
@@ -65,12 +76,12 @@ tinyhost deploy ./site --app sales-report --no-promote
 tinyhost apps
 tinyhost info sales-report
 tinyhost versions sales-report
-tinyhost promote sales-report v2
+tinyhost rollback sales-report v2 -m "Restore chart layout"
 ```
 
 Creating an App requires `--create`; omit it on later deploys. New Apps default to private (Owner login required to view). `--public` applies only with `--create`. Agents cannot change visibility or rename Apps; ask the Owner to use the admin console. Never put keys, tokens or private information in a public App or a preview.
 
-Each successful publish creates an immutable version. Default publishing moves the main URL to it; `--no-promote` leaves the main URL unchanged. Rollback with `promote` changes only that pointer. Future changes build on the version currently selected by the main URL, including after rollback. **After publishing, give the user both the exact version URL and the exact main URL from the CLI output.** For previews, send the exact preview URL and expiry.
+Each successful publish creates an immutable version. Default publishing moves the main URL to it; `--no-promote` leaves the main URL unchanged. Use `rollback` to create a new version with the selected version's App package and today's main data. To restore the entire snapshot, including its historical data, use `tinyhost promote sales-report v2`. That command moves the main pointer to v2 without allocating a version. Future changes build on the version currently selected by the main URL, including after rollback. **After publishing, give the user both the exact version URL and the exact main URL from the CLI output.** For previews, send the exact preview URL and expiry.
 
 ## Update data independently
 
@@ -111,6 +122,7 @@ Omit `?create=1` for an existing App; use `visibility=public` only when delibera
 - `slug_taken`: inspect the existing App and choose a new slug if unrelated; do not overwrite it merely to resolve the error.
 - `overlay_conflict`: inspect info and select a non-overlapping directory; agree on data contracts before replacing data.
 - `bad_bundle`: ensure index.html exists, remove unsafe paths/symlinks and reduce file count or size.
+- `already_current`: the requested package is already on main. Inspect `tinyhost versions` before taking further action.
 - Preview TTL error: use Go durations such as 1h, 24h, 168h (not 30d).
 - Preview 410/404: run preview again and share the returned link.
 - Root-relative path warnings or broken assets: fix URLs to be relative, rebuild and republish.

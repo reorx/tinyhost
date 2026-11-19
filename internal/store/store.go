@@ -21,10 +21,14 @@ import (
 var schema string
 
 var (
-	ErrAppNotFound     = errors.New("app not found")
-	ErrVersionNotFound = errors.New("version not found")
-	ErrOverlayConflict = errors.New("overlay conflict")
-	ErrOverlayNotFound = errors.New("overlay not found")
+	ErrPreviewNotFound  = errors.New("preview not found")
+	ErrPreviewExpired   = errors.New("preview expired")
+	ErrPreviewCollision = errors.New("preview hash collision")
+	ErrAlreadyCurrent   = errors.New("package already current")
+	ErrAppNotFound      = errors.New("app not found")
+	ErrVersionNotFound  = errors.New("version not found")
+	ErrOverlayConflict  = errors.New("overlay conflict")
+	ErrOverlayNotFound  = errors.New("overlay not found")
 )
 
 type Store struct {
@@ -73,6 +77,8 @@ type Version struct {
 	Message, CreatedBy string
 	CreatedAt          int64
 	Overlays           []Overlay
+	RollbackOf         *int
+	Preview            *string
 }
 
 func id(prefix string) string { return prefix + token.New()[3:] }
@@ -118,8 +124,8 @@ func migrate(db *sql.DB) error {
 	if err = tx.QueryRow("PRAGMA user_version").Scan(&n); err != nil {
 		return err
 	}
-	if n > 3 {
-		return fmt.Errorf("database schema %d is newer than supported version 3", n)
+	if n > 4 {
+		return fmt.Errorf("database schema %d is newer than supported version 4", n)
 	}
 	if n == 0 {
 		if _, err = tx.Exec(schema); err != nil {
@@ -142,6 +148,11 @@ func migrate(db *sql.DB) error {
 			return err
 		}
 		if _, err = tx.Exec("PRAGMA user_version=3"); err != nil {
+			return err
+		}
+	}
+	if n < 4 {
+		if _, err = tx.Exec(appPreviewSchema + "; PRAGMA user_version=4"); err != nil {
 			return err
 		}
 	}

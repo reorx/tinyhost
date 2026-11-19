@@ -437,6 +437,10 @@ func TestServerConfigurationPrecedence(t *testing.T) {
 
 // Behavior: help begins with Agent instructions and version and skill are usable offline in text and JSON.
 func TestLocalCommandsWorkWithoutCredentials(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_CONFIG_HOME", home)
+	t.Setenv("AppData", home)
 	t.Setenv("TINYHOST_TOKEN", "")
 	t.Setenv("TINYHOST_SERVER", "")
 	for _, name := range []string{"help", "version", "skill"} {
