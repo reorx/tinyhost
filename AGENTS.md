@@ -8,6 +8,7 @@
 - 2026-11-03：M4 上线完成，正式版 `v0.1.0` 已发布 Release 和 ghcr 镜像，仓库公开在 `github.com/reorx/tinyhost`（MIT）。线上 apps `https://tinyhost.space`、后台 `https://th.reorx.com`，用 Docker Compose 运行镜像，用真实 Agent 和手机做过端到端验收。生产部署配置和运维 SOP 在独立的 deploy 仓库（见用户全局 CLAUDE.md 的 DevOps 约定）的 `kb/docs/tinyhost.md`，本仓库不存生产服务器细节、凭据和部署总结。验收发布时要核对线上服务的版本头和 CLI 版本一致。
 - 2026-11-03：`v0.1.1` 上线，后台 Agent 页新增可复制的 quickstart 指示（plan `kb/plans/2026-11-03-agent-quickstart.md`）。
 - 2026-11-03：`v0.1.2` 上线，后台 App 详情页可以把文件夹、zip 或 html 直接上传成新版本（plan `kb/plans/2026-11-03-manual-upload.md`）。线上后台站点的请求体上限和 apps 一样是 60MB（在 deploy 仓库的 Caddy 模板里）。
+- 2026-11-19：`v0.2.0` 上线，新增 `rollback`（只换 App 包、保留当前数据）和 `preview --app` → `publish`（按内容哈希审核后发布），schema 升到 v4（总结见 `kb/sessions/2026-11-19-th-rollback-preview.md`）。0.1.2 的镜像读不了 v4 的库，回退要恢复升级前的快照。线上没有覆盖 `TINYHOST_NOTIFY_EVENTS`，新事件随默认值推送。
 - **仓库是公开的**：提交、`kb/`、总结里不写密值、token、IP、OSS bucket 名，也不写 reorx.com 上其他服务的安全弱点。运维细节写进 deploy 仓库。
 
 ## 关键约束

@@ -49,9 +49,20 @@ tags:
 | 后台 | 已归档浅色、深色、390px 页面、审计和过期页截图。390px 视口的页面宽度为 390px。原生确认框已验证取消、确认及回滚结果。浏览器对话框事件保存在 `confirm.json`，系统屏幕录制权限限制了原生窗口截图。 |
 | 自动化 | 全量 Go 测试、vet、gofmt 检查通过。store、server、CLI 新流程也通过了 race 检查。 |
 
+## 发版与上线（2026-11-19）
+
+- 用户确认后发版：master CI 绿，`v0.2.0` 附注 tag（指向 `8064bc5`）的 [Release 流水线](https://github.com/reorx/tinyhost/actions/runs/44538373529)一次绿。Release 是正式版，有 10 个资产；流水线里的双架构版本、nonroot、healthy 检查都通过。
+- 线上升级（deploy 仓库 `d83b2c2`）：
+  - 升级前手动备份成功。升级后 `user_version=4`，`integrity_check=ok`。App、版本、client、layer 的计数和密码哈希前后一致，`app_previews` 是空表。
+  - 两个域名的 `X-Tinyhost-Version` 都是 `0.2.0`，`/_/health` 返回 `ok`，容器 healthy。未带 token 请求新接口返回 401。
+  - 线上 `.env` 没有设置 `TINYHOST_NOTIFY_EVENTS`，用服务端默认值，`app.rolled_back` 和 `app.preview_published` 自动推送，不需要改 env。
+  - [accept-install](https://github.com/reorx/tinyhost/actions/runs/44540357293) 三平台绿，产生的 3 条授权申请没有批准，会自动过期。
+- 回退：0.1.2 镜像读不了 v4 的库，要回退必须恢复升级前的快照，不能只改版本号。
+- 证据在 `tmp/2026-11-19-v0.2.0-release/`。
+
 ## 遗留事项
 
-建议版本号 `v0.2.0`。上线前需由用户确认发版，再检查 deploy 仓库是否显式覆盖 `notify-events`；覆盖默认列表的实例需按需加入两项新通知。
+- 线上没有用真实 Owner 会话在 `th.reorx.com` 验过新的后台界面（版本来源标注、「回滚到此版本」、App 预览区块）和 Agent 端的 `rollback`、`preview --app`、`publish`；本地验收已覆盖，留给用户在真实数据上试。试的时候会产生真实的 `app.rolled_back` / `app.preview_published` 通知。
 
 ## 相关文档
 
